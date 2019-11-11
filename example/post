@@ -1,0 +1,1 @@
+curl -H "Content-Type:application/json" -X POST --data '{"message": "hello"}' http://localhost:5678?id=xyz
