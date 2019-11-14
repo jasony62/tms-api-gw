@@ -1,6 +1,7 @@
 version: '3.7'
 services:
   app:
+    build: ./
     image: tms-api-gw-node:latest
     container_name: tms-api-gw-node
     ports:

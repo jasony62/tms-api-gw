@@ -1,81 +1,46 @@
 # tms-api-gw
 
-注意不要保存
+tms-api-gw 是一个 api 网关，可以通过设置规则将外部 http 请求转发到内部服务，提供：路由、日志、认证、配额功能。
+
+# 安装
+
+> cnpm i
 
 > cnpm i log4js
 
-> export ACCESS_TOKEN=xxx
+# 业务规则
 
-> ./example/get
+在 config 目录下新建 gateway.js 文件，参考 gateway.sample.js 文件进行设置。
 
-> ./example/post
+## 路由规则（proxy.rules）
 
-# docker
+参考：https://www.npmjs.com/package/http-proxy-rules
 
-## mongodb
+## 日志（trace）
 
-> docker pull mongo
+指定连接 mongodb 的参数。
 
-```
-docker run --name tms-api-gw -p 27017:27017 -v $PWD/storage/mongodb:/data/db -d mongo:latest
-```
+包括如下 collection：
 
-> docker pull redis:latest
+| 集合          | 用途               |
+| ------------- | ------------------ |
+| trace_log     | api 调用的完整数据 |
+| quota_day     | api 调用每日计数   |
+| quota_archive | api 调用计数归档   |
 
-基于 nodejs 的 http-proxy 实现的通用 api 网关。
+## 认证（auth）
 
-请求管理流程
+请求中包含参数`access_token`，网关将该参数转拼接到 url 发送到 url 指定的认证服务接口。认证服务并不是本项目的组成部分，需要单独实现。
 
-事件
+| 参数       | 类型   | 说明                                                                                                                               |
+| ---------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| http.query | array  | 第 1 位指定接收到的 url 中认证信息字段的名称，第 2 位认证服务接口中认证信息字段的名称，若不指定为：['access_token','acccess_token] |
+| http.url   | string | 指定的认证服务接口                                                                                                                 |
 
-接收 receive
+## 配额（quota）
 
-记录原始数据（raw）
+未实现
 
-路由匹配（route）
+# 运行
 
-若不匹配，返回 404
-
-若匹配，match，生成路由匹配事件
-
-用户认证（auth）
-
-若不匹配，返回 401
-
-若匹配，authorized，生成用户匹配队列
-
-配额检查
-
-若不通过，返回 403
-
-若通过，passed，放入队列
-
-通过代理发送请求
-
-返回结果，放入队列
-
-返回调用方法
-
-# 配置文件
-
-# 路由
-
-ProxyRule
-
-超时
-
-报错
-
-# 日志
-
-保存在 mongodb 中
-
-支持发送到 redis 或 kafka 中
-
-配额管理
-
-# 认证
-
-到 redis 里取
-
-# 配额
+> docker-compose up -d
