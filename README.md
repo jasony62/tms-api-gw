@@ -4,6 +4,12 @@
 
 > cnpm i log4js
 
+> export ACCESS_TOKEN=xxx
+
+> ./example/get
+
+> ./example/post
+
 # docker
 
 ## mongodb

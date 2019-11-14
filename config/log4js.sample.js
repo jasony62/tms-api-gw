@@ -3,7 +3,6 @@ module.exports = {
     consoleout: { type: 'console' }
   },
   categories: {
-    default: { appenders: ['consoleout'], level: 'debug' }
-  },
-  pm2: true
+    default: { appenders: ['consoleout'], level: 'info' }
+  }
 }

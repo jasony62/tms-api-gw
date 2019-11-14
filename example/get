@@ -1,1 +1,1 @@
-curl http://localhost:5678?id=abc
+curl "http://localhost:5678?id=123&access_token=$ACCESS_TOKEN"
