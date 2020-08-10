@@ -3,3 +3,5 @@ node_modules
 storage
 config/gateway.js
 config/log4js.js
+.env
+.env.*
