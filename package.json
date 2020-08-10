@@ -4,7 +4,8 @@
   "description": "基于nodejs的http-proxy实现的通用api网关。",
   "main": "lib",
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "pm2": "pm2 start ecosystem.config.js"
   },
   "repository": {
     "type": "git",
@@ -20,8 +21,10 @@
   "dependencies": {
     "@log4js-node/log4js-api": "^1.0.2",
     "axios": "^0.19.0",
+    "dotenv-flow": "^3.1.0",
     "http-proxy": "^1.18.0",
     "lodash": "^4.17.15",
+    "log4js": "^6.3.0",
     "mongoose": "^5.7.9",
     "uuid": "^3.3.3"
   },
