@@ -1,0 +1,32 @@
+version: '3.7'
+services:
+    mmongodb:
+      volumes:
+        - /home/devops/mongodata/msg:/data/db
+      ports:
+        - '27019:27017'
+      logging:
+        driver: 'none'
+      networks:
+      - portal
+    redis:
+      ports:
+        - 7100:6379
+      networks:
+        - portal
+
+    back:
+      ports:
+        - '3450:3000'
+      environment:
+      - TMS_REDIS_PREFIX=dev-op
+      - TMS_REDIS_HOST=redis
+      - TMS_REDIS_PORT=6379
+      - TMS_MESSENGER_FS_ROOTDIR=/data
+      - TRUSTIPS_FILE_DEV189=["127.0.0.1","1"]
+      networks:
+      - portal
+networks:
+  portal:
+    driver: bridge
+    external: true

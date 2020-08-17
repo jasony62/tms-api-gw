@@ -1,20 +1,50 @@
 version: '3.7'
 services:
-  app:
-    build: ./
-    image: tms-api-gw-node:latest
-    container_name: tms-api-gw-node
-    ports:
-      - '5678:3000'
-    volumes:
-      - ./config:/usr/src/app/config
-    depends_on:
-      - mongodb
-
-  mongodb:
-    image: mongo:latest
-    container_name: tms-api-gw-mongo
-    ports:
-      - '27017:27017'
-    logging:
-      driver: none
+  mmongodb:
+    build: ./mongodb
+    image: tms-msg/mongo:latest
+    container_name: msg-mongo
+  
+  redis:
+    build: ./redis
+    image: tms-msg/redis:alpine
+    container_name: msg-redis
+  back:
+    build: ./back
+    image: tms-msg/back:latest
+    container_name: msg-back
+    environment:
+       - TMS_APP_PORT=3000
+       - TMS_APP_NAME=tms_messenger
+       - TMS_MESSENGER_READ_MESSAGE_URL=http://developer.189.cn
+       - TMS_APP_LOG4JS_LEVEL=debug
+       - TMS_FINDER_FS_OUTDIR=/data/
+       - TMS_FINDER_FS_ROOTDIR=/data/
+       - TMS_MESSENGER_MONGODB_HOST=mmongodb
+       - TMS_MESSENGER_MONGODB_PORT=27017
+       - TMS_MESSENGER_MONGODB_DB=tms_messenger
+       - TMS_MESSENGER_REDIS_HOST=redis
+       - TMS_MESSENGER_REDIS_PORT=6379
+       # wxproxy 默认微信appid
+       # # TMS_WXPROXY_WX_APPID=aaaa
+       # # wxproxy 默认微信 appsecret
+       # # TMS_WXPROXY_WX_APPSECRET=aaaaa
+       # # 是否启用bucket
+       # # TMS_MSG_REQUIRE_BUCKET=true
+       # 要用哪个redis
+       - TMS_MESSENGER_MESSAGE_REQUEST_QUEUE_REDIS=master
+       # # 要用监听redis的频道
+       - TMS_MESSENGER_MESSAGE_REQUEST_QUEUE_NAME=dev189WX
+       # messenger 要用的mongodb库
+       - TMS_MESSENGER_MONGODB_DB=tms_messenger_dev189
+       # # 权限管理库名
+       - TMS_KOA_BUCKET_DB=tms_messenger_bucket_dev189
+       # # 权限管理表名
+       - TMS_KOA_BUCKET_COLLECTION=dev189
+       # # wxproxy 要用mongodb的库
+       - TMS_WXPROXY_MONGODB_DB=tms_messenger_dev189
+       # # wxproxy 用来存储access_token的表
+       - TMS_WXPROXY_MONGODB_CL_CONFIG=channel
+       # # wxproxy 记录消息发送情况的表
+       - TMS_WXPROXY_MONGODB_CL_TEMPLATE_MESSAGE=request
+#    command: ['sh', './wait-for.sh', 'mmongodb:27017', '-t', '300', '--', 'node', 'server']
