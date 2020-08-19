@@ -1,8 +1,8 @@
 version: '3.7'
 services:
-    mmongodb:
+    jmongodb:
       volumes:
-        - /home/devops/mongodata/msg:/data/db
+        - /home/devops/mongodata/api-jh:/data/db
       ports:
         - '27019:27017'
       logging:
@@ -13,11 +13,16 @@ services:
       ports:
         - '3450:3000'
       environment:
-      - TMS_REDIS_PREFIX=dev-op
-      - TMS_REDIS_HOST=redis
-      - TMS_REDIS_PORT=6379
-      - TMS_MESSENGER_FS_ROOTDIR=/data
-      - TRUSTIPS_FILE_DEV189=["127.0.0.1","1"]
+#      - TMS_TRACE_MONGODB_USER=admin
+#      - TMS_TRACE_MONGODB_PASSWORD=password
+        - TMS_TRACE_MONGODB_HOST=jmongodb
+        - TMS_TRACE_MONGODB_PORT=27017
+#      - TMS_QUOTA_MONGODB_USER=admin
+#      - TMS_QUOTA_MONGODB_PASSWORD=password
+        - TMS_QUOTA_MONGODB_HOST=jmongodb
+        - TMS_QUOTA_MONGODB_PORT=27017
+        - TMS_PROXY_RULES={"/it/api":"http://192.168.51.106:3360/it/api"}
+        - TMS_APP_PORT=3000
       networks:
       - portal
 networks:

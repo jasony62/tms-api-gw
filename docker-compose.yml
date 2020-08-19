@@ -8,14 +8,3 @@ services:
     build: ./back
     image: 192.168.253.28/api-jh/back:latest
     container_name: jh-back
-    environment:
-      - TMS_TRACE_MONGODB_USER=admin
-      - TMS_TRACE_MONGODB_PASSWORD=password
-      - TMS_TRACE_MONGODB_HOST=127.0.0.1
-      - TMS_TRACE_MONGODB_PORT=27018
-      - TMS_QUOTA_MONGODB_USER=admin
-      - TMS_QUOTA_MONGODB_PASSWORD=password
-      - TMS_QUOTA_MONGODB_HOST=127.0.0.1
-      - TMS_QUOTA_MONGODB_PORT=27018
-      - TMS_PROXY_RULES={'/it/api': 'http://192.168.51.106:3360/it/api'}
-      - TMS_APP_PORT=6789
