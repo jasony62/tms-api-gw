@@ -1,0 +1,31 @@
+version: '3.7'
+services:
+    jmongodb:
+      volumes:
+        - /home/devops/mongodata/api-jh:/data/db
+      ports:
+        - '27019:27017'
+      logging:
+        driver: 'none'
+      networks:
+      - portal
+    back:
+      ports:
+        - '3450:3000'
+      environment:
+#      - TMS_TRACE_MONGODB_USER=admin
+#      - TMS_TRACE_MONGODB_PASSWORD=password
+        - TMS_TRACE_MONGODB_HOST=jmongodb
+        - TMS_TRACE_MONGODB_PORT=27017
+#      - TMS_QUOTA_MONGODB_USER=admin
+#      - TMS_QUOTA_MONGODB_PASSWORD=password
+        - TMS_QUOTA_MONGODB_HOST=jmongodb
+        - TMS_QUOTA_MONGODB_PORT=27017
+#        - TMS_PROXY_RULES={"/api":"http://*****:**/api"}
+        - TMS_APP_PORT=3000
+      networks:
+      - portal
+networks:
+  portal:
+    driver: bridge
+    external: true

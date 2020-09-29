@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: 'tms-api-gw',
+      name: 'tms-api-gw-jh',
       script: './app.js',
       instances: 1,
       autorestart: true,
