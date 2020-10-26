@@ -14,7 +14,7 @@ module.exports = {
     default: `http://localhost:1234`
   },
   trace: {
-    enable: true,
+    enable: process.env.TMS_TRACE_ENABLE === "false" ? false : true,
     mongodb: {
       user: process.env.TMS_TRACE_MONGODB_USER || false,
       password: process.env.TMS_TRACE_MONGODB_PASSWORD || false,
@@ -24,7 +24,7 @@ module.exports = {
     }
   },
   quota: {
-    enable: true,
+    enable: process.env.TMS_QUOTA_ENABLE === "false" ? false : true,
     mongodb: {
       user: process.env.TMS_QUOTA_MONGODB_USER || false,
       password: process.env.TMS_QUOTA_MONGODB_PASSWORD || false,
@@ -35,7 +35,7 @@ module.exports = {
     rules: {}
   },
   auth: {
-    enable: false,
+    enable: process.env.TMS_TRACE_ENABLE === "true" ? true : false,
     http: {
       query: process.env.TMS_AUTH_HTTP_QUERY ? JSON.parse(process.env.TMS_AUTH_HTTP_QUERY) : ['access_tocken', 'access_tocken'],
       url: process.env.TMS_AUTH_HTTP_URL || "http://localhost:3001/auth/token",
