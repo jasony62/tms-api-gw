@@ -7,9 +7,9 @@ class HttpAuth {
     this.clientIdField = opt.clientIdField || 'id'
   }
   check(req) {
-    const urlObj = new URL(req.url, "http://localhost/")
+    const { query } = require('url').parse(req.url, true)
     return new Promise((resolve, reject) => {
-      let param = [this.query[0], urlObj.searchParams.get(this.query[1])]
+      let param = [this.query[0], query[this.query[1]]]
       param = param.join('=')
       axios.get(`${this.url}?${param}`).then(rsp => {
         if (rsp.data.code !== 0) {
