@@ -50,7 +50,6 @@ class Gateway {
         try {
           clientId = await this.ctx.auth.check(req)
         } catch (err) {
-          logger.error("auth", req.url, err)
           res.writeHead(401, { 'Content-Type': 'text/plain' })
           return res.end(err.msg)
         }
@@ -68,7 +67,6 @@ class Gateway {
       }
 
       // 执行反向代理
-      logger.debug("proxy", req.url, target)
       proxy.web(req, res, { target })
 
       // 复制请求
