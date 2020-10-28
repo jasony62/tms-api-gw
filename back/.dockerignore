@@ -1,5 +1,1 @@
-.*
-node_modules
-config
-ecosystem.config.js
-public
+.env
