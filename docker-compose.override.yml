@@ -4,14 +4,14 @@ services:
       volumes:
         - /home/devops/mongodata/api-jh:/data/db
       ports:
-        - '27019:27017'
+        - '27010:27017'
       logging:
         driver: 'none'
       networks:
       - portal
     back:
       ports:
-        - '3450:3000'
+        - '3370:3000'
       environment:
 #      - TMS_TRACE_MONGODB_USER=admin
 #      - TMS_TRACE_MONGODB_PASSWORD=password
@@ -21,7 +21,7 @@ services:
 #      - TMS_QUOTA_MONGODB_PASSWORD=password
         - TMS_QUOTA_MONGODB_HOST=jmongodb
         - TMS_QUOTA_MONGODB_PORT=27017
-        - TMS_PROXY_RULES={"/it/api":"http://192.168.51.106:3360/it/api"}
+        - TMS_PROXY_RULES={"/interact-gateway/api/recv/orderBack_fk":"http://192.168.20.248/it/api/recv/orderBack?domain=fk","/interact-gateway/api/recv/orderBack_crm":"http://192.168.20.248/it/api/recv/orderBack?domain=crm"}
         - TMS_APP_PORT=3000
       networks:
       - portal
