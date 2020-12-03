@@ -35,7 +35,7 @@ module.exports = {
     rules: {}
   },
   auth: {
-    enable: process.env.TMS_TRACE_ENABLE === "true" ? true : false,
+    enable: process.env.TMS_TRACE_AUTH === "true" ? true : false,
     http: {
       query: process.env.TMS_AUTH_HTTP_QUERY ? JSON.parse(process.env.TMS_AUTH_HTTP_QUERY) : ['access_token', 'access_token'],
       url: process.env.TMS_AUTH_HTTP_URL || "http://localhost:3001/auth/token",
