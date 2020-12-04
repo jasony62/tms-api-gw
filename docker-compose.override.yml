@@ -21,7 +21,7 @@ services:
 #      - TMS_QUOTA_MONGODB_PASSWORD=password
         - TMS_QUOTA_MONGODB_HOST=jmongodb
         - TMS_QUOTA_MONGODB_PORT=27017
-        - TMS_PROXY_RULES={"/interact-gateway/api/recv/orderBack_fk":"http://192.168.20.248/it/api/recv/orderBack?domain=fk","/interact-gateway/api/recv/orderBack_crm":"http://192.168.20.248/it/api/recv/orderBack?domain=crm"}
+#        - TMS_PROXY_RULES={"/api":"http://*****:**/api"}
         - TMS_APP_PORT=3000
       networks:
       - portal

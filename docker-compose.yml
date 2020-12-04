@@ -2,11 +2,11 @@ version: '3.7'
 services:
   jmongodb:
     build: ./mongodb
-    image: 192.168.253.28/interact-gw/mongo:latest
+    image: api-gw/mongo:latest
     container_name: jh-mongo
   back:
     build: ./back
-    image: 192.168.253.28/interact-gw/back:latest
+    image: api-gw/back:latest
     container_name: jh-back
     #environment:
       #
