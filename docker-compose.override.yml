@@ -4,14 +4,14 @@ services:
       volumes:
         - /home/devops/mongodata/api-jh:/data/db
       ports:
-        - '27010:27017'
+        - '27019:27017'
       logging:
         driver: 'none'
       networks:
       - portal
     back:
       ports:
-        - '3370:3000'
+        - '3450:3000'
       environment:
 #      - TMS_TRACE_MONGODB_USER=admin
 #      - TMS_TRACE_MONGODB_PASSWORD=password
