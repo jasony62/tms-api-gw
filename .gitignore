@@ -1,3 +1,2 @@
 .vscode
 mongodb/data
-docker-compose.*.yml
