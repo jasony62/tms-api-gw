@@ -2,9 +2,9 @@ version: '3.7'
 services:
   jmongodb:
     build: ./mongodb
-    image: 192.168.253.28/interact-gw/mongo:latest
-    container_name: jh-mongo
+    image: 192.168.253.28/int-gw/mongo:latest
+    container_name: gw-bind-mongo
   back:
     build: ./back
-    image: 192.168.253.28/interact-gw/back:latest
-    container_name: jh-back
+    image: 192.168.253.28/int-gw/back:latest
+    container_name: gw-bind-back
