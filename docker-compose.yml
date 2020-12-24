@@ -1,6 +1,6 @@
 version: '3.7'
 services:
-  jmongodb:
+  gbmongodb:
     build: ./mongodb
     image: 192.168.253.28/int-gw/mongo:latest
     container_name: gw-bind-mongo
