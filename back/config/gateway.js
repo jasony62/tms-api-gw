@@ -13,7 +13,7 @@ module.exports = {
     rules: process.env.TMS_PROXY_RULES ? JSON.parse(process.env.TMS_PROXY_RULES) : {},
     default: `http://localhost:1234`
   },
-  trace: {
+  trace: { // 日志
     enable: process.env.TMS_TRACE_ENABLE === "false" ? false : true,
     mongodb: {
       user: process.env.TMS_TRACE_MONGODB_USER || false,
@@ -35,7 +35,7 @@ module.exports = {
     rules: {}
   },
   auth: {
-    enable: process.env.TMS_TRACE_ENABLE === "true" ? true : false,
+    enable: process.env.TMS_AUTH_ENABLE === "true" ? true : false,
     http: {
       query: process.env.TMS_AUTH_HTTP_QUERY ? JSON.parse(process.env.TMS_AUTH_HTTP_QUERY) : ['access_token', 'access_token'],
       url: process.env.TMS_AUTH_HTTP_URL || "http://localhost:3001/auth/token",
