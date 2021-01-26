@@ -3,7 +3,6 @@ const axios = require('axios')
 class HttpAuth {
   constructor(opt) {
     this.url = opt.url
-    this.path = opt.path
     this.query = opt.query || ['access_token', 'access_token']
     this.clientIdField = opt.clientIdField || 'id'
   }
