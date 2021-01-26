@@ -31,6 +31,7 @@ module.exports = {
   },
   auth: {
     enable: false,
+    onlyError: false,
     http: {
       query: ['access_token', 'access_token'],
       url: `http://${host}:3001/auth/client`

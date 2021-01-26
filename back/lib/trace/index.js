@@ -1,6 +1,7 @@
 const log4js = require('@log4js-node/log4js-api')
 const logger = log4js.getLogger('tms-api-gw')
 const _ = require('lodash')
+const gatewayConfig = require('../../config/gateway')
 
 function parseBody(req) {
   return new Promise((resolve, reject) => {
@@ -45,7 +46,7 @@ class Trace {
     )
   }
   async logSendReq(proxyReq, req, res, options) {
-    logger.debug('logSendReq enter')
+    logger.debug('logSendReq enter ' + req.originUrl)
     const sendUrl = _.pick(options.target, [
       'protocol',
       'hostname',
@@ -63,7 +64,12 @@ class Trace {
     )
   }
   logResponse(proxyRes, req, res) {
-    logger.debug('logResponse enter')
+    logger.debug('logResponse enter ' + req.targetUrl)
+
+    if (gatewayConfig.trace.onlyError === true && proxyRes.statusCode === 200) {
+      return
+    }
+
     let body = []
     proxyRes.on('data', chunk => {
       body.push(chunk)

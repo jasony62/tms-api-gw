@@ -17,6 +17,7 @@ class Gateway {
     const proxy = httpProxy.createProxyServer()
     // 异常事件不处理
     proxy.on('error', (err, req, res) => {
+      logger.error("logError " + req.originUrl, err)
       res.end()
     })
     // 准备发送请求
@@ -68,7 +69,6 @@ class Gateway {
       }
 
       // 执行反向代理
-      logger.debug("proxy", req.url, target)
       proxy.web(req, res, { target })
 
       // 复制请求
