@@ -17,6 +17,7 @@ class Gateway {
     const proxy = httpProxy.createProxyServer()
     // 异常事件不处理
     proxy.on('error', (err, req, res) => {
+      logger.error("logError " + req.originUrl, err)
       res.end()
     })
     // 准备发送请求
@@ -50,6 +51,7 @@ class Gateway {
         try {
           clientId = await this.ctx.auth.check(req)
         } catch (err) {
+          logger.error("auth", req.url, err)
           res.writeHead(401, { 'Content-Type': 'text/plain' })
           return res.end(err.msg)
         }

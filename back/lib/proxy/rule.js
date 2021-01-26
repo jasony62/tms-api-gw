@@ -55,6 +55,8 @@ HttpProxyRules.prototype.match = function match(req) {
     }
   }
 
+  req.originUrl = path
+  req.targetUrl = target + req.url
   return target
 }
 

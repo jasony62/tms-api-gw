@@ -8,3 +8,31 @@ services:
     build: ./back
     image: api-gw/back:latest
     container_name: jh-back
+    #environment:
+      #
+      # - TMS_APP_PORT=6789
+      # 转发规则 crm调it模块接口
+      # - TMS_PROXY_RULES={"/interact-gateway/api/recv/orderBack_fk": "http://localhost:3730/it/api/recv/orderBack?domain=fk", "/interact-gateway/api/recv/orderBack_crm": "http://localhost:3730/it/api/recv/orderBack?domain=crm"}
+      # mongo
+      # - TMS_TRACE_MONGODB_USER=admin
+      # - TMS_TRACE_MONGODB_PASSWORD=password
+      # - TMS_TRACE_MONGODB_HOST=127.0.0.1
+      # - TMS_TRACE_MONGODB_PORT=27018
+      # - TMS_TRACE_MONGODB_DATABASE=tms_api_gw
+      # - TMS_QUOTA_MONGODB_USER=admin
+      # - TMS_QUOTA_MONGODB_PASSWORD=password
+      # - TMS_QUOTA_MONGODB_HOST=127.0.0.1
+      # - TMS_QUOTA_MONGODB_PORT=27018
+      # - TMS_QUOTA_MONGODB_DATABASE=tms_api_gw
+      # 是否记录访问统计
+      # - TMS_QUOTA_ENABLE=true
+      # 是否记录访问日志
+      # - TMS_TRACE_ENABLE=true
+      # 访问日志是否只记录错误日志
+      # - TMS_TRACE_ENABLE_ONLYERROR=false
+      # 是否鉴权
+      # - TMS_AUTH_ENABLE=true
+      # 鉴权接口
+      # - TMS_AUTH_HTTP_URL=http://localhost/oauth/ue/auth/authorize
+      # - TMS_AUTH_HTTP_PATH=./lib/auth/auth.js
+
