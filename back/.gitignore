@@ -3,5 +3,5 @@ node_modules/
 public/
 .env
 .env.*
-config/gateway.js
-config/log4js.js
+config/gateway.*
+config/log4js.*
