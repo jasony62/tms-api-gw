@@ -27,8 +27,9 @@ module.exports =function (req, res) {
     if (rsp.data.code !== 0) {
       return Promise.reject(rsp.data)
     }
+    let serviceAuthRid = process.env.APP_SERVICEAUTHRID ? JSON.parse(process.env.APP_SERVICEAUTHRID) : ["16", 16]
     const client = rsp.data.result
-    if (client.data.rid != "16") {
+    if (!serviceAuthRid.includes(client.data.rid)) {
       return Promise.reject({code: 1001, msg: "权限错误"})
     }
     const clientId = client["id"]
