@@ -12,7 +12,7 @@ function getAccessTokenByRequest(request) {
   } else if (request.query.access_token) {
     access_token = request.query.access_token
   } else {
-    return [false, '缺少Authorization头或access_token参数']
+    return [false, {code: "20003", msg: '缺少Authorization头或access_token参数'}]
   }
 
   return [true, access_token]

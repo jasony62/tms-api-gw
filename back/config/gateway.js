@@ -33,7 +33,13 @@ module.exports = {
       port: parseInt(process.env.TMS_QUOTA_MONGODB_PORT) || 27017,
       database: process.env.TMS_QUOTA_MONGODB_DATABASE || 'tms-api-gw-jh'
     },
-    rules: {}
+    rules: {
+      rateLimit: {
+        minute: {
+          limit: 10
+        }
+      }
+    }
   },
   auth: {
     enable: process.env.TMS_AUTH_ENABLE === "true" ? true : false,

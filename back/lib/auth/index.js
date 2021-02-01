@@ -19,8 +19,8 @@ class HttpAuth {
           // 方法必须是返回一个 promise
           if (typeof authFunc === "function") {
             authFunc(req, res).then(r => resolve(r)).catch(e => reject(e))
-          } else reject("指定的鉴权方式不是一个promise方法")
-        } else reject("指定的鉴权方法不存在")
+          } else reject({msg: "指定的鉴权方式不是一个promise方法"})
+        } else reject({msg: "指定的鉴权方法不存在"})
       } else {
         let param = [this.query[0], query[this.query[1]]]
         param = param.join('=')
