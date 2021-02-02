@@ -63,7 +63,6 @@ class Gateway {
         try {
           await this.ctx.quota.check(req)
         } catch (err) {
-          console.log(2222, err)
           res.writeHead(403, { 'Content-Type': 'text/plain' })
           return res.end(err.msg)
         }
