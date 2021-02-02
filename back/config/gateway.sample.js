@@ -30,7 +30,7 @@ module.exports = {
     rules: {
       rateLimit: {
         minute: {
-          limit: 10
+          limit: 0
         }
       }
     }

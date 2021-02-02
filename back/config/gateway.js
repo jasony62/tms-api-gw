@@ -36,7 +36,7 @@ module.exports = {
     rules: {
       rateLimit: {
         minute: {
-          limit: 10
+          limit: process.env.TMS_QUOTA_RATELIMIT_MINUTE || 0
         }
       }
     }
