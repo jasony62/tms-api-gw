@@ -27,7 +27,13 @@ module.exports = {
       port: 27017,
       database: 'tms-api-gw'
     },
-    rules: {}
+    rules: {
+      rateLimit: {
+        minute: {
+          limit: 0
+        }
+      }
+    }
   },
   auth: {
     enable: false,

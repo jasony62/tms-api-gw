@@ -61,7 +61,7 @@ class Gateway {
       // 检查配额
       if (this.ctx.quota && clientId) {
         try {
-          this.ctx.quota.check(req)
+          await this.ctx.quota.check(req)
         } catch (err) {
           res.writeHead(403, { 'Content-Type': 'text/plain' })
           return res.end(err.msg)
@@ -90,7 +90,7 @@ Gateway.startup = async function() {
       return res.end(e.message)
     })
     app.listen(3000, () => {
-      logger.warn('Tms Api Gateway startup fail: ', e.message)
+      logger.warn('Tms Api Gateway startup fail: ', e)
       logger.info('Tms Api Gateway is runing at 3000')
     })
   }

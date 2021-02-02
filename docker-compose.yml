@@ -35,4 +35,3 @@ services:
       # 鉴权接口
       # - TMS_AUTH_HTTP_URL=http://localhost/oauth/ue/auth/authorize
       # - TMS_AUTH_HTTP_PATH=./lib/auth/auth.js
-
