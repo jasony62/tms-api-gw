@@ -1,3 +1,7 @@
+const log4js = require('@log4js-node/log4js-api')
+const logger = log4js.getLogger('tms-api-gw')
+const _ = require("lodash")
+
 class Quota {
   constructor(ModelDay, ModelArchive, rules) {
     this.modelDay = ModelDay
@@ -86,8 +90,26 @@ class Quota {
    *
    * @param {*} req
    */
-  check(req) {
+  async check(req) {
     const { clientId, api, requestAt } = this.getReqInfo(req)
+    if (this.rules.rateLimit) {
+      const rateLimit = this.rules.rateLimit
+      const doc = await this.modelDay.findOne({ clientId, api })
+      if (doc) {
+        let oLatestAt = new Date(doc.latestAt)
+        let oRequestAt = new Date(requestAt)
+        oLatestAt.setSeconds(0, 0)
+        oRequestAt.setSeconds(0, 0)
+        let diff = oRequestAt - oLatestAt
+        const minuLimit = _.get(rateLimit, "minute.limit", null)
+        if (diff < 60000 && !isNaN(minuLimit) && parseInt(minuLimit) > 0) {
+          if (minuLimit <= doc.minute) {
+            logger.warn("quota check minuLimit", api)
+            return Promise.reject({msg: `本接口执行流量控制，限制次数为[${minuLimit}]，周期为[秒]，当前次数[${doc.minute}]`})
+          }
+        }
+      }
+    }
 
     return true
   }
