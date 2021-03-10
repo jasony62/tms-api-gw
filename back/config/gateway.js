@@ -16,6 +16,7 @@ module.exports = {
   trace: { // 日志
     enable: process.env.TMS_TRACE_ENABLE === "false" ? false : true,
     onlyError:  process.env.TMS_TRACE_ENABLE_ONLYERROR === "true" ? true : false,
+    send: process.env.TMS_TRACE_SEND || "",
     mongodb: {
       user: process.env.TMS_TRACE_MONGODB_USER || false,
       password: process.env.TMS_TRACE_MONGODB_PASSWORD || false,

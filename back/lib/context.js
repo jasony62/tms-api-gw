@@ -65,10 +65,15 @@ Context.ins = (function() {
     ctx = new Context(config)
 
     /* trace */
-    if (config.trace && config.trace.mongodb) {
-      const MongoContext = require('./mongo')
-      const mongo = await MongoContext.ins(config.trace.mongodb)
-      const trace = require('./trace')(ctx.emitter, mongo.mongoose)
+    if (config.trace && (config.trace.mongodb || config.trace.send)) {
+      let trace
+      if (config.trace.mongodb) {
+        const MongoContext = require('./mongo')
+        const mongo = await MongoContext.ins(config.trace.mongodb)
+        trace = require('./trace')(ctx.emitter, mongo.mongoose, config.trace.send)
+      } else {
+        trace = require('./trace')(ctx.emitter, "", config.trace.send)
+      }
       ctx.trace = trace
     }
     /* quota */

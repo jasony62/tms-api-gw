@@ -14,6 +14,7 @@ module.exports = {
   },
   trace: {
     enable: true,
+    send: `http://${host}:1234`,
     mongodb: {
       host,
       port: 27017,

@@ -41,7 +41,7 @@ class Gateway {
       const target = this.rules.match(req)
       if (!target) {
         // 没有匹配的目标直接返回
-        res.writeHead(404, { 'Content-Type': 'text/plain' })
+        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })
         return res.end('Not found')
       }
 
@@ -52,7 +52,7 @@ class Gateway {
           clientId = await this.ctx.auth.check(req, res)
         } catch (err) {
           logger.error("auth", req.url, err)
-          res.writeHead(401, { 'Content-Type': 'text/plain' })
+          res.writeHead(401, { 'Content-Type': 'text/plain; charset=utf-8' })
           return res.end(err.msg)
         }
         req.headers['x-request-client'] = clientId
@@ -63,8 +63,7 @@ class Gateway {
         try {
           await this.ctx.quota.check(req)
         } catch (err) {
-          console.log(2222, err)
-          res.writeHead(403, { 'Content-Type': 'text/plain' })
+          res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' })
           return res.end(err.msg)
         }
       }
@@ -87,7 +86,8 @@ Gateway.startup = async function() {
   } catch (e) {
     const http = require('http')
     const app = http.createServer(async (req, res) => {
-      res.writeHead(500, { 'Content-Type': 'text/plain' })
+      logger.error("createGateway", e)
+      res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' })
       return res.end(e.message)
     })
     app.listen(3000, () => {

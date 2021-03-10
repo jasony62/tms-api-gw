@@ -19,8 +19,9 @@ function parseBody(req) {
  * API调用追踪
  */
 class Trace {
-  constructor(model) {
-    this.model = model
+  constructor(mongodbModel = null, sendModel = null) {
+    this.mongodbModel = mongodbModel
+    this.sendModel = sendModel
   }
   /**
    * 记录请求的原始信息
@@ -38,12 +39,23 @@ class Trace {
       'pathname',
       'query'
     ])
-    this.model.create(
-      { requestId, recvUrl, method, recvHeaders: headers },
-      err => {
-        if (err) logger.warn('TraceLog.create', err)
-      }
-    )
+    const datas = { requestId, recvUrl, method, recvHeaders: headers }
+    if (this.mongodbModel) {
+      this.mongodbModel.create(
+        datas,
+        err => {
+          if (err) logger.warn('TraceLog.create', err)
+        }
+      )
+    }
+    if (this.sendModel) {
+      this.sendModel({
+        event: "recvReq",
+        requestId,
+        logs: datas
+      })
+    }
+    return 
   }
   async logSendReq(proxyReq, req, res, options) {
     logger.debug('logSendReq enter ' + req.originUrl)
@@ -58,10 +70,18 @@ class Trace {
 
     let recvBody
     if ('POST' == req.method) recvBody = await parseBody(req)
-    await this.model.updateOne(
-      { requestId },
-      { $set: { clientId, sendUrl, recvBody } }
-    )
+    const datas = { clientId, sendUrl, recvBody }
+    if (this.mongodbModel) {
+      await this.mongodbModel.updateOne( { requestId }, { $set: datas } )
+    }
+    if (this.sendModel) {
+      this.sendModel({
+        event: "sendReq",
+        requestId,
+        logs: datas
+      })
+    }
+    return 
   }
   logResponse(proxyRes, req, res) {
     logger.debug('logResponse enter ' + req.targetUrl)
@@ -80,18 +100,23 @@ class Trace {
       const requestAt = req.headers['x-request-at']
       const elapseMs = new Date() * 1 - requestAt
       const { statusCode, statusMessage, headers } = proxyRes
-      await this.model.updateOne(
-        { requestId },
-        {
-          $set: {
-            statusCode,
-            statusMessage,
-            responseHeaders: headers,
-            responseBody: body,
-            elapseMs
-          }
-        }
-      )
+      const datas = {
+        statusCode,
+        statusMessage,
+        responseHeaders: headers,
+        responseBody: body,
+        elapseMs
+      }
+      if (this.mongodbModel) {
+        await this.mongodbModel.updateOne( { requestId }, { $set: datas } )
+      }
+      if (this.sendModel) {
+        await this.sendModel({
+          event: "response",
+          requestId,
+          logs: datas
+        })
+      }
       res.end(body)
     })
   }
@@ -136,15 +161,43 @@ Trace.createModel = function(mongoose) {
 
   return Model
 }
+Trace.createSendModel = function(cmd) {
+  const axios = require('axios')
+  const adapter = require('axios/lib/adapters/http')
 
+  let options = { 
+    adapter,
+    // timeout: 3000,
+    maxBodyLength: Infinity,
+    maxContentLength: Infinity,
+  }
+  return function(datas, headers) {
+    (() => {
+      const send = axios.create(options)
+      let config = {}
+      if (headers) config.headers = headers
+      return send
+        .post(cmd, datas, config)
+        .catch( err => {
+          logger.error('sendLog err ', err)
+          return
+        })
+    })()
+    return 
+  }
+}
 module.exports = (function() {
   let _instance
-  return function(emitter, mongoose) {
+  return function(emitter, mongoose, send) {
     if (_instance) return _instance
 
-    let Model = Trace.createModel(mongoose)
+    let mongodbModel, sendModel
+    if (mongoose) 
+      mongodbModel = Trace.createModel(mongoose)
+    if (send) 
+      sendModel = Trace.createSendModel(send)
 
-    _instance = new Trace(Model)
+    _instance = new Trace(mongodbModel, sendModel)
 
     emitter.on('recvReq', _instance.logRecvReq.bind(_instance))
     emitter.on('proxyReq', _instance.logSendReq.bind(_instance))
