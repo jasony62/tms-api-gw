@@ -28,6 +28,8 @@ services:
       # - TMS_QUOTA_ENABLE=true
       # 是否记录访问日志
       # - TMS_TRACE_ENABLE=true
+      # 日志是否发送到第三方平台地址
+      # - TMS_TRACE_SEND_URL=http://localhost
       # 访问日志是否只记录错误日志
       # - TMS_TRACE_ENABLE_ONLYERROR=false
       # 是否鉴权
