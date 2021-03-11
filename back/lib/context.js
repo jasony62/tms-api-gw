@@ -65,14 +65,14 @@ Context.ins = (function() {
     ctx = new Context(config)
 
     /* trace */
-    if (config.trace && (config.trace.mongodb || config.trace.send)) {
+    if (config.trace && (config.trace.mongodb || config.trace.sendThird)) {
       let trace
       if (config.trace.mongodb) {
         const MongoContext = require('./mongo')
         const mongo = await MongoContext.ins(config.trace.mongodb)
-        trace = require('./trace')(ctx.emitter, mongo.mongoose, config.trace.send)
+        trace = require('./trace')(ctx.emitter, mongo.mongoose, config.trace.sendThird)
       } else {
-        trace = require('./trace')(ctx.emitter, "", config.trace.send)
+        trace = require('./trace')(ctx.emitter, "", config.trace.sendThird)
       }
       ctx.trace = trace
     }
