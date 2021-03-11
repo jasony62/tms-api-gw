@@ -15,6 +15,10 @@ module.exports = {
   trace: {
     enable: true,
     send: `http://${host}:1234`,
+    sendThird: { 
+      url: `http://${host}:1234`, // 第三方url地址
+      events: ["recvReq", "sendReq", "response"] // 需要发送的事件，默认都发送
+    },
     mongodb: {
       host,
       port: 27017,

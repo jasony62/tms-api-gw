@@ -49,11 +49,7 @@ class Trace {
       )
     }
     if (this.sendModel) {
-      this.sendModel({
-        event: "recvReq",
-        requestId,
-        logs: datas
-      })
+      this.sendModel("recvReq", requestId, "", datas)
     }
     return 
   }
@@ -75,11 +71,7 @@ class Trace {
       await this.mongodbModel.updateOne( { requestId }, { $set: datas } )
     }
     if (this.sendModel) {
-      this.sendModel({
-        event: "sendReq",
-        requestId,
-        logs: datas
-      })
+      this.sendModel("sendReq", requestId, clientId, datas)
     }
     return 
   }
@@ -98,6 +90,7 @@ class Trace {
       body = Buffer.concat(body).toString()
       const requestId = req.headers['x-request-id']
       const requestAt = req.headers['x-request-at']
+      const clientId = req.headers['x-request-client']
       const elapseMs = new Date() * 1 - requestAt
       const { statusCode, statusMessage, headers } = proxyRes
       const datas = {
@@ -111,11 +104,7 @@ class Trace {
         await this.mongodbModel.updateOne( { requestId }, { $set: datas } )
       }
       if (this.sendModel) {
-        await this.sendModel({
-          event: "response",
-          requestId,
-          logs: datas
-        })
+        await this.sendModel("response", requestId, clientId, datas)
       }
       res.end(body)
     })
@@ -161,23 +150,30 @@ Trace.createModel = function(mongoose) {
 
   return Model
 }
-Trace.createSendModel = function(cmd) {
+Trace.createSendModel = function(thirdConfig) {
   const axios = require('axios')
   const adapter = require('axios/lib/adapters/http')
 
-  let options = { 
-    adapter,
-    // timeout: 3000,
-    maxBodyLength: Infinity,
-    maxContentLength: Infinity,
-  }
-  return function(datas, headers) {
+  const { url, events } = thirdConfig
+  return function(event, requestId, clientId = "", datas) {
     (() => {
-      const send = axios.create(options)
-      let config = {}
-      if (headers) config.headers = headers
-      return send
-        .post(cmd, datas, config)
+      if (events && !events.includes(event)) return // 只发送指定事件，默认都发送
+
+      const options = { 
+        adapter,
+        // timeout: 3000,
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity,
+      }
+      const instance = axios.create(options)
+      let headers = {
+        "x-request-event": event,
+        "x-request-id": requestId
+      }
+      if (clientId) headers["x-request-client"] = clientId
+
+      return instance
+        .post(url, datas, { headers })
         .catch( err => {
           logger.error('sendLog err ', err)
           return
@@ -188,14 +184,14 @@ Trace.createSendModel = function(cmd) {
 }
 module.exports = (function() {
   let _instance
-  return function(emitter, mongoose, send) {
+  return function(emitter, mongoose, thirdConfig) {
     if (_instance) return _instance
 
     let mongodbModel, sendModel
     if (mongoose) 
       mongodbModel = Trace.createModel(mongoose)
-    if (send) 
-      sendModel = Trace.createSendModel(send)
+    if (thirdConfig) 
+      sendModel = Trace.createSendModel(thirdConfig)
 
     _instance = new Trace(mongodbModel, sendModel)
 
