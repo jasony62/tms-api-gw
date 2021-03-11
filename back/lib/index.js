@@ -49,7 +49,7 @@ class Gateway {
       let clientId
       if (this.ctx.auth) {
         try {
-          clientId = await this.ctx.auth.check(req, res)
+          clientId = await this.ctx.auth.check(req)
         } catch (err) {
           logger.error("auth", req.url, err)
           res.writeHead(401, { 'Content-Type': 'text/plain; charset=utf-8' })
