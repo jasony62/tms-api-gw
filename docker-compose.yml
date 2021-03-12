@@ -1,13 +1,13 @@
 version: '3.7'
 services:
-  gbmongodb:
+  jmongodb:
     build: ./mongodb
-    image: 192.168.253.28/int-gw/mongo:latest
-    container_name: gw-bind-mongo
+    image: api-gw/mongo:latest
+    container_name: jh-mongo
   back:
     build: ./back
-    image: 192.168.253.28/int-gw/back:latest
-    container_name: gw-bind-back
+    image: api-gw/back:latest
+    container_name: jh-back
     #environment:
       #
       # - TMS_APP_PORT=6789
@@ -34,6 +34,5 @@ services:
       # - TMS_AUTH_ENABLE=true
       # 鉴权接口
       # - TMS_AUTH_HTTP_URL=http://localhost/oauth/ue/auth/authorize
-      # - TMS_AUTH_HTTP_PATH=./lib/auth/auth.js
       # 配额 0 不检查
       # - TMS_QUOTA_RATELIMIT_MINUTE=0

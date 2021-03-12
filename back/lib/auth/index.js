@@ -1,15 +1,12 @@
 const axios = require('axios')
-const fs = require("fs")
-const PATH = require("path")
 
 class HttpAuth {
   constructor(opt) {
     this.url = opt.url
-    this.path = opt.path
     this.query = opt.query || ['access_token', 'access_token']
     this.clientIdField = opt.clientIdField || 'id'
   }
-  check(req, res) {
+  check(req) {
     const { query } = require('url').parse(req.url, true)
     return new Promise((resolve, reject) => {
       let param = [this.query[0], query[this.query[1]]]
