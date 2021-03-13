@@ -19,9 +19,8 @@ function parseBody(req) {
  * API调用追踪
  */
 class Trace {
-  constructor(mongodbModel = null, sendModel = null) {
+  constructor(mongodbModel) {
     this.mongodbModel = mongodbModel
-    this.sendModel = sendModel
   }
   /**
    * 记录请求的原始信息
@@ -40,17 +39,12 @@ class Trace {
       'query'
     ])
     const datas = { requestId, recvUrl, method, recvHeaders: headers }
-    if (this.mongodbModel) {
-      this.mongodbModel.create(
-        datas,
-        err => {
-          if (err) logger.warn('TraceLog.create', err)
-        }
-      )
-    }
-    if (this.sendModel) {
-      this.sendModel("recvReq", requestId, "", datas)
-    }
+    this.mongodbModel.create(
+      datas,
+      err => {
+        if (err) logger.warn('TraceLog.create', err)
+      }
+    )
     return 
   }
   async logSendReq(proxyReq, req, res, options) {
@@ -67,12 +61,7 @@ class Trace {
     let recvBody
     if ('POST' == req.method) recvBody = await parseBody(req)
     const datas = { clientId, sendUrl, recvBody }
-    if (this.mongodbModel) {
-      await this.mongodbModel.updateOne( { requestId }, { $set: datas } )
-    }
-    if (this.sendModel) {
-      this.sendModel("sendReq", requestId, clientId, datas)
-    }
+    await this.mongodbModel.updateOne( { requestId }, { $set: datas } )
     return 
   }
   logResponse(proxyRes, req, res) {
@@ -90,7 +79,6 @@ class Trace {
       body = Buffer.concat(body).toString()
       const requestId = req.headers['x-request-id']
       const requestAt = req.headers['x-request-at']
-      const clientId = req.headers['x-request-client']
       const elapseMs = new Date() * 1 - requestAt
       const { statusCode, statusMessage, headers } = proxyRes
       const datas = {
@@ -100,12 +88,7 @@ class Trace {
         responseBody: body,
         elapseMs
       }
-      if (this.mongodbModel) {
-        await this.mongodbModel.updateOne( { requestId }, { $set: datas } )
-      }
-      if (this.sendModel) {
-        await this.sendModel("response", requestId, clientId, datas)
-      }
+      await this.mongodbModel.updateOne( { requestId }, { $set: datas } )
       res.end(body)
     })
   }
@@ -150,50 +133,13 @@ Trace.createModel = function(mongoose) {
 
   return Model
 }
-Trace.createSendModel = function(thirdConfig) {
-  const axios = require('axios')
-  const adapter = require('axios/lib/adapters/http')
-
-  const { url, events } = thirdConfig
-  return function(event, requestId, clientId = "", datas) {
-    (() => {
-      if (events && !events.includes(event)) return // 只发送指定事件，默认都发送
-
-      const options = { 
-        adapter,
-        // timeout: 3000,
-        maxBodyLength: Infinity,
-        maxContentLength: Infinity,
-      }
-      const instance = axios.create(options)
-      let headers = {
-        "x-request-event": event,
-        "x-request-id": requestId
-      }
-      if (clientId) headers["x-request-client"] = clientId
-
-      return instance
-        .post(url, datas, { headers })
-        .catch( err => {
-          logger.error('sendLog err ', err)
-          return
-        })
-    })()
-    return 
-  }
-}
 module.exports = (function() {
   let _instance
-  return function(emitter, mongoose, thirdConfig) {
+  return function(emitter, mongoose) {
     if (_instance) return _instance
 
-    let mongodbModel, sendModel
-    if (mongoose) 
-      mongodbModel = Trace.createModel(mongoose)
-    if (thirdConfig) 
-      sendModel = Trace.createSendModel(thirdConfig)
-
-    _instance = new Trace(mongodbModel, sendModel)
+    let mongodbModel = Trace.createModel(mongoose)
+    _instance = new Trace(mongodbModel)
 
     emitter.on('recvReq', _instance.logRecvReq.bind(_instance))
     emitter.on('proxyReq', _instance.logSendReq.bind(_instance))

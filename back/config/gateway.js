@@ -16,10 +16,6 @@ module.exports = {
   trace: { // 日志
     enable: process.env.TMS_TRACE_ENABLE === "false" ? false : true,
     onlyError:  process.env.TMS_TRACE_ENABLE_ONLYERROR === "true" ? true : false,
-    sendThird: { 
-      url: process.env.TMS_TRACE_SEND_URL || "",
-      events: process.env.TMS_TRACE_SEND_EVENTS ? JSON.parse(process.env.TMS_TRACE_SEND_EVENTS) : ["recvReq", "sendReq", "response"]
-    },
     mongodb: {
       user: process.env.TMS_TRACE_MONGODB_USER || false,
       password: process.env.TMS_TRACE_MONGODB_PASSWORD || false,
@@ -53,5 +49,17 @@ module.exports = {
       url: process.env.TMS_AUTH_HTTP_URL || "http://localhost:3001/auth/token",
       clientIdField: process.env.TMS_AUTH_HTTP_CLIENTIDFIELD || "id"
     }
-  }
+  },
+  sendMessage: {
+    enable: process.env.TMS_SENDMESSAGE_ENABLE === "true" ? true : false,
+    url: process.env.TMS_TRACE_SEND_URL || "",
+    events: process.env.TMS_TRACE_SEND_EVENTS ? JSON.parse(process.env.TMS_TRACE_SEND_EVENTS) : ["recvReq", "sendReq", "response"],
+    logPath: process.env.TMS_SENDMESSAGE_LOGPATH || '',
+    redis: {
+      prefix: process.env.TMS_REDIS_PREFIX || 'tms-api-gw-sendMessage',
+      host: process.env.TMS_SENDMESSAGE_REDIS_HOST || '127.0.0.1',
+      port: parseInt(process.env.TMS_SENDMESSAGE_REDIS_PORT) || 6379,
+      channel: process.env.TMS_SENDMESSAGE_REDIS_CHANNEL || 'tms-api-gw-sendMessage',
+    }
+  },
 }

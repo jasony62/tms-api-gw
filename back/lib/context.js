@@ -30,7 +30,7 @@ Config.ins = (function() {
       return Promise.reject(new ConfigError(msg))
     }
 
-    const { port, proxy, trace, quota, auth } = require(filename)
+    const { port, proxy, trace, quota, auth, sendMessage } = require(filename)
     _ins = new Config(port, proxy)
     if (trace && (trace.enable === undefined || trace.enable === true))
       _ins.trace = trace
@@ -38,10 +38,13 @@ Config.ins = (function() {
       _ins.quota = quota
     if (auth && (auth.enable === undefined || auth.enable === true))
       _ins.auth = auth
+    if (sendMessage && (sendMessage.enable === undefined || sendMessage.enable === true))
+      _ins.sendMessage = sendMessage
 
     logger.info('日志服务：', _ins.trace ? '打开' : '否')
     logger.info('配额服务：', _ins.quota ? '打开' : '否')
     logger.info('认证服务：', _ins.auth ? '打开' : '否')
+    logger.info('消息发送服务：', _ins.sendMessage ? '打开' : '否')
 
     return _ins
   }
@@ -65,15 +68,10 @@ Context.ins = (function() {
     ctx = new Context(config)
 
     /* trace */
-    if (config.trace && (config.trace.mongodb || config.trace.sendThird)) {
-      let trace
-      if (config.trace.mongodb) {
-        const MongoContext = require('./mongo')
-        const mongo = await MongoContext.ins(config.trace.mongodb)
-        trace = require('./trace')(ctx.emitter, mongo.mongoose, config.trace.sendThird)
-      } else {
-        trace = require('./trace')(ctx.emitter, "", config.trace.sendThird)
-      }
+    if (config.trace && config.trace.mongodb) {
+      const MongoContext = require('./mongo')
+      const mongo = await MongoContext.ins(config.trace.mongodb)
+      let trace = require('./trace')(ctx.emitter, mongo.mongoose)
       ctx.trace = trace
     }
     /* quota */
@@ -91,6 +89,12 @@ Context.ins = (function() {
     if (config.auth) {
       const auth = require('./auth')(config.auth)
       ctx.auth = auth
+    }
+    /* sendMessage */
+    if (config.sendMessage && config.sendMessage.redis) {
+      const sendContext = require('./sendMessage')
+      const instance = await sendContext(ctx.emitter, config.sendMessage)
+      ctx.sendMessage = instance
     }
 
     return ctx
