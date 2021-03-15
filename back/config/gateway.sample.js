@@ -8,6 +8,7 @@ if (process.env.TMS_API_GW_ENV === 'docker') {
 }
 module.exports = {
   port,
+  name: "api-gw",
   proxy: {
     rules: {},
     default: `http://${host}:1234`
@@ -46,6 +47,18 @@ module.exports = {
     http: {
       query: ['access_token', 'access_token'],
       url: `http://${host}:3001/auth/client`
+    }
+  },
+  sendMessage: {
+    enable: false,
+    url: "",
+    events: ["recvReq", "sendReq", "response"],
+    logPath: '',
+    redis: {
+      prefix: 'tms-api-gw-sendMessage',
+      host: '127.0.0.1',
+      port: 6379,
+      channel: 'tms-api-gw-sendMessage',
     }
   }
 }

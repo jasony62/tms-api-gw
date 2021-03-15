@@ -2,7 +2,7 @@ const axios = require('axios')
 const adapter = require('axios/lib/adapters/http')
 const log4js = require('log4js')
 
-const { sendMessage: sendMsgConfig } = require('../../config/gateway')
+const { sendMessage: sendMsgConfig, name: appName } = require('../../config/gateway')
 const RedisContext = require('../redis').Context
 
 let log4jsConfig = {
@@ -15,7 +15,7 @@ if (sendMsgConfig.logPath) {
   log4jsConfig.appenders.logFile = {
     type: "file",
     filename: sendMsgConfig.logPath,
-    maxLogSize: 100 * 1024 * 1024,
+    maxLogSize: 10 * 1024 * 1024,
     numBackups: 10
   }
   appenders.push("logFile")
@@ -34,7 +34,7 @@ const logger = log4js.getLogger('tms-api-gw-sendMessage_send')
 async function sendMsg(message) {
   //
   message = JSON.parse(message)
-  const { event, requestId, clientId = "", datas } = message
+  const { event, requestId, requestAt, clientId = "", datas } = message
   if (!requestId) return [false, "未找到requestId"]
   //
   const { events, url } = sendMsgConfig
@@ -48,9 +48,11 @@ async function sendMsg(message) {
   const instance = axios.create(options)
   let headers = {
     "x-request-event": event,
-    "x-request-id": requestId
+    "x-request-id": requestId,
+    "x-request-at": requestAt,
   }
   if (clientId) headers["x-request-client"] = clientId
+  if (appName) headers["x-gateway-name"] = appName
 
   return instance
     .post(url, datas, { headers })

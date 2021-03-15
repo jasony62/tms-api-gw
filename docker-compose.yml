@@ -39,3 +39,11 @@ services:
       # - TMS_AUTH_HTTP_PATH=./lib/auth/auth.js
       # 配额 0 不检查
       # - TMS_QUOTA_RATELIMIT_MINUTE=0
+      # 0318 开启消息发送进程
+      # - TMS_SENDMESSAGE_ENABLE=true
+      # 0318 第三方储存日志平台地址
+      # - TMS_TRACE_SEND_URL=http://127.0.0.1:3533/etd/api/dev189/gwLog
+      # - TMS_TRACE_SEND_EVENTS=["response"]
+      # 0318 redis
+      # - TMS_SENDMESSAGE_REDIS_HOST=localhost
+      # - TMS_SENDMESSAGE_REDIS_PORT=6399

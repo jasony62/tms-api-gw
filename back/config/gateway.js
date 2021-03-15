@@ -9,6 +9,7 @@ if (process.env.TMS_API_GW_ENV === 'docker') {
 
 module.exports = {
   port,
+  name: process.env.TMS_APP_NAME || "",
   proxy: {
     rules: process.env.TMS_PROXY_RULES ? JSON.parse(process.env.TMS_PROXY_RULES) : {},
     default: `http://localhost:1234`

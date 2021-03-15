@@ -102,6 +102,7 @@ class PublishMessage {
   sendLogRecvReq(req) {
     const { method, headers, url } = req
     const requestId = headers['x-request-id']
+    const requestAt = headers['x-request-at']
     const recvUrl = _.pick(require('url').parse(url, true), [
       'protocol',
       'hostname',
@@ -113,6 +114,7 @@ class PublishMessage {
     this.publish({ 
       event: "recvReq", 
       requestId, 
+      requestAt,
       clientId: "", 
       datas 
     })
@@ -127,6 +129,7 @@ class PublishMessage {
     ])
     const requestId = req.headers['x-request-id']
     const clientId = req.headers['x-request-client']
+    const requestAt = req.headers['x-request-at']
 
     let recvBody
     if ('POST' == req.method) recvBody = await parseBody(req)
@@ -134,6 +137,7 @@ class PublishMessage {
     this.publish({ 
       event: "sendReq", 
       requestId, 
+      requestAt,
       clientId, 
       datas 
     })
@@ -158,6 +162,7 @@ class PublishMessage {
       await this.publish({ 
         event: "response", 
         requestId, 
+        requestAt,
         clientId, 
         datas: {
           statusCode,

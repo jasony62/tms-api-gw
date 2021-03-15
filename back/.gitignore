@@ -3,3 +3,4 @@ node_modules/
 public/
 .env
 .env.*
+docker-compose.*.yml
