@@ -47,3 +47,5 @@ services:
       # 0318 redis
       # - TMS_SENDMESSAGE_REDIS_HOST=localhost
       # - TMS_SENDMESSAGE_REDIS_PORT=6399
+      # app name
+      # - TMS_APP_NAME=***
