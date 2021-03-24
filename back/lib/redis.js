@@ -31,7 +31,7 @@ Context.ins = (function () {
       return _instancesByName.get(config)
     }
 
-    let { host, port } = config || {}
+    let { host, port, password } = config || {}
     if (
       undefined === host &&
       undefined === port &&
@@ -50,7 +50,8 @@ Context.ins = (function () {
       throw new redis.RedisError(msg)
     }
 
-    const url = `redis://${host}:${port}`
+    let url = `redis://${host}:${port}`
+    if (password) url += `?password=${password}`
 
     if (_instancesByUrl.has(url)) return _instancesByUrl.get(url)
 

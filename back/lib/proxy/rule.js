@@ -26,6 +26,7 @@ HttpProxyRules.prototype.match = function match(req) {
   let testPrefixMatch
   let urlPrefix
   let pathEndsWithSlash
+  let targetRule
   for (let pathPrefix in rules) {
     if (!rules.hasOwnProperty(pathPrefix)) continue
     if (pathPrefix[pathPrefix.length - 1] === '/') {
@@ -42,7 +43,13 @@ HttpProxyRules.prototype.match = function match(req) {
     if (testPrefixMatch && testPrefixMatch.index === 0) {
       urlPrefix = pathEndsWithSlash ? testPrefixMatch[0] : testPrefixMatch[1]
       req.url = path.replace(urlPrefix, '')
-      target = rules[pathPrefix]
+      targetRule = rules[pathPrefix]
+      if (typeof targetRule === "string") {
+        target = targetRule
+        targetRule = { target }
+      } else {
+        target = targetRule.target
+      }
       // We replace matches on the target,
       // e.g. /posts/([0-9]+)/comments/([0-9]+) => /posts/$1/comments/$2
       for (var i = 1; i < testPrefixMatch.length; i++) {
@@ -54,7 +61,9 @@ HttpProxyRules.prototype.match = function match(req) {
       break
     }
   }
-
+  req.targetRule = targetRule
+  console.log(0.111, targetRule)
+  req.urlPrefix = urlPrefix
   req.originUrl = path
   req.targetUrl = target + req.url
   return target

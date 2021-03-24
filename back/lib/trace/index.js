@@ -19,18 +19,32 @@ function parseBody(req) {
  * API调用追踪
  */
 class Trace {
-  constructor(mongodbModel) {
-    this.mongodbModel = mongodbModel
+  constructor(config, traceInstanceMap) {
+    this.config = config
+    this.traceInstanceMap = traceInstanceMap
+  }
+  /**
+   * 
+   */
+  getTargetTrace(targetRule) {
+    let targetTraces
+    if (targetRule.trace && Array.isArray(targetRule.trace)) {
+      targetTraces = targetRule.trace
+    } else {
+      targetTraces = this.config.default
+    }
+    return targetTraces
   }
   /**
    * 记录请求的原始信息
    *
    * @param {*} req
    */
-  logRecvReq(req) {
+  logRecvReq(req, res, ctx) {
     logger.debug('logRecvReq enter')
-    const { method, headers, url } = req
+    const { method, headers, url, targetRule } = req
     const requestId = headers['x-request-id']
+    const requestAt = headers['x-request-at']
     const recvUrl = _.pick(require('url').parse(url, true), [
       'protocol',
       'hostname',
@@ -39,15 +53,39 @@ class Trace {
       'query'
     ])
     const datas = { requestId, recvUrl, method, recvHeaders: headers }
-    this.mongodbModel.create(
-      datas,
-      err => {
-        if (err) logger.warn('TraceLog.create', err)
+    
+    let targetTraces = this.getTargetTrace(targetRule)
+    if (Array.isArray(targetTraces)) {
+      for (const tc of targetTraces) {
+        if (this.traceInstanceMap.has(tc)) {
+          const instances = this.traceInstanceMap.get(tc)
+          if (instances.events && !instances.events.includes("recvReq"))
+              continue
+          if (instances.type === "mongodb") {
+            instances.mongoose.create(
+              datas,
+              err => {
+                if (err) logger.warn('TraceLog.create', err)
+              }
+            )
+          } else if (instances.type === "http") {
+            if (ctx.pushMessage) {
+              ctx.pushMessage.publish({ 
+                event: "recvReq", 
+                requestId, 
+                requestAt,
+                clientId: "", 
+                datas 
+              })
+            }
+          }
+        }
       }
-    )
+    }
+
     return 
   }
-  async logSendReq(proxyReq, req, res, options) {
+  async logSendReq(proxyReq, req, res, options, ctx) {
     logger.debug('logSendReq enter ' + req.originUrl)
     const sendUrl = _.pick(options.target, [
       'protocol',
@@ -57,17 +95,41 @@ class Trace {
     ])
     const requestId = req.headers['x-request-id']
     const clientId = req.headers['x-request-client']
+    const requestAt = req.headers['x-request-at']
 
     let recvBody
     if ('POST' == req.method) recvBody = await parseBody(req)
     const datas = { clientId, sendUrl, recvBody }
-    await this.mongodbModel.updateOne( { requestId }, { $set: datas } )
+
+    let targetTraces = this.getTargetTrace(req.targetRule)
+    if (Array.isArray(targetTraces)) {
+      for (const tc of targetTraces) {
+        if (this.traceInstanceMap.has(tc)) {
+          const instances = this.traceInstanceMap.get(tc)
+          if (instances.events && !instances.events.includes("sendReq"))
+              continue
+          if (instances.type === "mongodb") {
+            instances.mongoose.updateOne( { requestId }, { $set: datas } )
+          } else if (instances.type === "http") {
+            if (ctx.pushMessage) {
+              ctx.pushMessage.publish({ 
+                event: "sendReq", 
+                requestId, 
+                requestAt,
+                clientId, 
+                datas 
+              })
+            }
+          }
+        }
+      }
+    }
     return 
   }
-  logResponse(proxyRes, req, res) {
+  logResponse(proxyRes, req, res, ctx) {
     logger.debug('logResponse enter ' + req.targetUrl)
 
-    if (gatewayConfig.trace.onlyError === true && proxyRes.statusCode === 200) {
+    if (this.config.onlyError === true && proxyRes.statusCode === 200) {
       return
     }
 
@@ -77,6 +139,7 @@ class Trace {
     })
     proxyRes.on('end', async () => {
       body = Buffer.concat(body).toString()
+      const clientId = req.headers['x-request-client']
       const requestId = req.headers['x-request-id']
       const requestAt = req.headers['x-request-at']
       const elapseMs = new Date() * 1 - requestAt
@@ -88,7 +151,29 @@ class Trace {
         responseBody: body,
         elapseMs
       }
-      await this.mongodbModel.updateOne( { requestId }, { $set: datas } )
+      let targetTraces = this.getTargetTrace(req.targetRule)
+      if (Array.isArray(targetTraces)) {
+        for (const tc of targetTraces) {
+          if (this.traceInstanceMap.has(tc)) {
+            const instances = this.traceInstanceMap.get(tc)
+            if (instances.events && !instances.events.includes("response"))
+                continue
+            if (instances.type === "mongodb") {
+              await instances.mongoose.updateOne( { requestId }, { $set: datas } )
+            } else if (instances.type === "http") {
+              if (ctx.pushMessage) {
+                ctx.pushMessage.publish({ 
+                  event: "response", 
+                  requestId, 
+                  requestAt,
+                  clientId, 
+                  datas 
+                })
+              }
+            }
+          }
+        }
+      }
       res.end(body)
     })
   }
@@ -135,11 +220,24 @@ Trace.createModel = function(mongoose) {
 }
 module.exports = (function() {
   let _instance
-  return function(emitter, mongoose) {
+  return async function(emitter, config) {
     if (_instance) return _instance
 
-    let mongodbModel = Trace.createModel(mongoose)
-    _instance = new Trace(mongodbModel)
+    const MongoContext = require('../mongo')
+    let { enable, onlyError, default: defaultTrace, ...traces } = config
+
+    let traceInstanceMap = new Map()
+    for (const key in traces) {
+      const val = traces[key]
+      if (val.type === "mongodb") {
+        const mongo = await MongoContext.ins(val)
+        const mongodbModel = Trace.createModel(mongo.mongoose)
+        val.mongoose = mongodbModel
+      }
+      traceInstanceMap.set(key, val)
+    }
+    
+    _instance = new Trace(config, traceInstanceMap)
 
     emitter.on('recvReq', _instance.logRecvReq.bind(_instance))
     emitter.on('proxyReq', _instance.logSendReq.bind(_instance))

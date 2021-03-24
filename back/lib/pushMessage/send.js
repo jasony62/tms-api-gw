@@ -2,7 +2,7 @@ const axios = require('axios')
 const adapter = require('axios/lib/adapters/http')
 const log4js = require('log4js')
 
-const { sendMessage: sendMsgConfig, name: appName } = require('../../config/gateway')
+const { pushMessage: pushMsgConfig, name: appName } = require('../../config/gateway')
 const RedisContext = require('../redis').Context
 
 let log4jsConfig = {
@@ -11,10 +11,10 @@ let log4jsConfig = {
   },
 }
 let appenders = ['consoleout']
-if (sendMsgConfig.logPath) {
+if (pushMsgConfig.logPath) {
   log4jsConfig.appenders.logFile = {
     type: "file",
-    filename: sendMsgConfig.logPath,
+    filename: pushMsgConfig.logPath,
     maxLogSize: 10 * 1024 * 1024,
     numBackups: 10
   }
@@ -37,7 +37,7 @@ async function sendMsg(message) {
   const { event, requestId, requestAt, clientId = "", datas } = message
   if (!requestId) return [false, "未找到requestId"]
   //
-  const { events, url } = sendMsgConfig
+  const { events, url } = pushMsgConfig
   if (events && !events.includes(event)) return [false, requestId + " 不需要发送的事件" + event]// 只发送指定事件，默认都发送
   const options = { 
     adapter,
@@ -72,7 +72,7 @@ async function start() {
   /**
    * 连接redis
    */
-  const { redis: redisConfig } = sendMsgConfig
+  const { redis: redisConfig } = pushMsgConfig
   await RedisContext.init(redisConfig) 
   const RedisClint = await RedisContext.redisClient()
   /**
