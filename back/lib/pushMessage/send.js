@@ -55,11 +55,11 @@ async function sendMsg(message) {
   return instance
     .post(pushUrl, datas, { headers })
     .then( rst => {
-      logger.info(requestId + ' sendLog succes ', rst.status, rst.data)
+      logger.info(requestId, event, JSON.stringify(datas) + JSON.stringify(headers) + ' sendLog succes ', rst.status, rst.data)
       return [true]
     })
     .catch( err => {
-      logger.error(requestId + ' sendLog err ', err)
+      logger.error(requestId, event, JSON.stringify(datas) + JSON.stringify(headers) + ' sendLog err ', err)
       return [false, requestId + " 消息发送失败 " + err.msg]
     })
 }
