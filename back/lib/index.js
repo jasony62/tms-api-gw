@@ -22,21 +22,18 @@ class Gateway {
     })
     // 准备发送请求
     proxy.on('proxyReq', async (proxyReq, req, res, options) => {
-      this.ctx.emitter.emit('proxyReq', proxyReq, req, res, options)
+      this.ctx.emitter.emit('proxyReq', proxyReq, req, res, options, this.ctx)
     })
     // 处理获得的响应
     proxy.on('proxyRes', (proxyRes, req, res) => {
-      this.ctx.emitter.emit('proxyRes', proxyRes, req, res)
+      this.ctx.emitter.emit('proxyRes', proxyRes, req, res, this.ctx)
     })
     // 启动http服务
     const app = http.createServer(async (req, res) => {
       // 设置唯一id，便于跟踪
       req.headers['x-request-id'] = uuid()
       req.headers['x-request-at'] = new Date() * 1
-
-      // 记录收到请求的原始信息
-      this.ctx.emitter.emit('recvReq', req, res)
-
+      
       // 匹配路由
       const target = this.rules.match(req)
       if (!target) {
@@ -44,6 +41,9 @@ class Gateway {
         res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })
         return res.end('Not found')
       }
+
+      // 记录收到请求的原始信息
+      this.ctx.emitter.emit('recvReq', req, res, this.ctx)
 
       // 身份认证
       let clientId

@@ -4,7 +4,7 @@ const log4js = require('log4js')
 require('dotenv-flow').config() // 环境变量 默认读取项目根目录下的.env文件
 
 let log4jsConfig
-if (fs.existsSync('./config/log4js')) {
+if (fs.existsSync('./config/log4js.js')) {
   log4jsConfig = require('./config/log4js')
 } else {
   log4jsConfig = {
