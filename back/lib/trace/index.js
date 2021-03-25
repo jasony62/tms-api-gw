@@ -57,6 +57,7 @@ class Trace {
     if (Array.isArray(targetTraces)) {
       for (const tc of targetTraces) {
         const targetTc = this.traceInstanceMap.get(tc)
+        if (!targetTc.type) targetTc.type = "mongodb"
         if (targetTc.events && !targetTc.events.includes("recvReq"))
             continue
         if (targetTc.type === "mongodb") {
@@ -103,6 +104,7 @@ class Trace {
     if (Array.isArray(targetTraces)) {
       for (const tc of targetTraces) {
         const targetTc = this.traceInstanceMap.get(tc)
+        if (!targetTc.type) targetTc.type = "mongodb"
         if (targetTc.events && !targetTc.events.includes("sendReq"))
             continue
         if (targetTc.type === "mongodb") {
@@ -152,6 +154,7 @@ class Trace {
       if (Array.isArray(targetTraces)) {
         for (const tc of targetTraces) {
           const targetTc = this.traceInstanceMap.get(tc)
+          if (!targetTc.type) targetTc.type = "mongodb"
           if (targetTc.events && !targetTc.events.includes("response"))
               continue
           if (targetTc.type === "mongodb") {
