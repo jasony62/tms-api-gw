@@ -34,11 +34,9 @@ const logger = log4js.getLogger('tms-api-gw-sendMessage_send')
 async function sendMsg(message) {
   //
   message = JSON.parse(message)
-  const { event, requestId, requestAt, clientId = "", datas } = message
+  const { event, pushUrl, requestId, requestAt, clientId = "", datas } = message
   if (!requestId) return [false, "未找到requestId"]
   //
-  const { events, url } = pushMsgConfig
-  if (events && !events.includes(event)) return [false, requestId + " 不需要发送的事件" + event]// 只发送指定事件，默认都发送
   const options = { 
     adapter,
     // timeout: 3000,
@@ -55,7 +53,7 @@ async function sendMsg(message) {
   if (appName) headers["x-gateway-name"] = appName
 
   return instance
-    .post(url, datas, { headers })
+    .post(pushUrl, datas, { headers })
     .then( rst => {
       logger.info(requestId + ' sendLog succes ', rst.status, rst.data)
       return [true]

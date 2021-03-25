@@ -23,16 +23,16 @@ module.exports =function (req, res) {
   let access_token = getAccessTokenByRequest({ headers: req.headers, query })
   if (access_token[0] === false) return Promise.reject(access_token[1])
   access_token = access_token[1]
-  return axios.get(`${process.env.TMS_AUTH_HTTP_URL}?access_token=${access_token}`).then(rsp => {
+  return axios.get(`${process.env.TMS_AUTH_HTTPSER_URL || process.env.TMS_AUTH_HTTP_URL}?access_token=${access_token}`).then(rsp => {
     if (rsp.data.code !== 0) {
-      return Promise.reject(rsp.data)
+      return rsp.data
     }
     let serviceAuthRid = process.env.APP_SERVICEAUTHRID ? JSON.parse(process.env.APP_SERVICEAUTHRID) : ["16", 16]
     const client = rsp.data.result
     if (!serviceAuthRid.includes(client.data.rid)) {
-      return Promise.reject({code: 1001, msg: "权限错误"})
+      return {code: 1001, msg: "权限错误"}
     }
     const clientId = client["id"]
-    return clientId
+    return { code: 0, clientId }
   })
 }

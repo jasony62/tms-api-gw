@@ -1,7 +1,6 @@
 const log4js = require('@log4js-node/log4js-api')
 const logger = log4js.getLogger('tms-api-gw')
 const _ = require('lodash')
-const gatewayConfig = require('../../config/gateway')
 
 function parseBody(req) {
   return new Promise((resolve, reject) => {
@@ -40,7 +39,7 @@ class Trace {
    *
    * @param {*} req
    */
-  logRecvReq(req, res, ctx) {
+  async logRecvReq(req, res, ctx) {
     logger.debug('logRecvReq enter')
     const { method, headers, url, targetRule } = req
     const requestId = headers['x-request-id']
@@ -57,27 +56,26 @@ class Trace {
     let targetTraces = this.getTargetTrace(targetRule)
     if (Array.isArray(targetTraces)) {
       for (const tc of targetTraces) {
-        if (this.traceInstanceMap.has(tc)) {
-          const instances = this.traceInstanceMap.get(tc)
-          if (instances.events && !instances.events.includes("recvReq"))
-              continue
-          if (instances.type === "mongodb") {
-            instances.mongoose.create(
-              datas,
-              err => {
-                if (err) logger.warn('TraceLog.create', err)
-              }
-            )
-          } else if (instances.type === "http") {
-            if (ctx.pushMessage) {
-              ctx.pushMessage.publish({ 
-                event: "recvReq", 
-                requestId, 
-                requestAt,
-                clientId: "", 
-                datas 
-              })
+        const targetTc = this.traceInstanceMap.get(tc)
+        if (targetTc.events && !targetTc.events.includes("recvReq"))
+            continue
+        if (targetTc.type === "mongodb") {
+          targetTc.mongoose.create(
+            datas,
+            err => {
+              if (err) logger.warn('TraceLog.create', err)
             }
+          )
+        } else if (targetTc.type === "http") {
+          if (ctx.pushMessage) {
+            ctx.pushMessage.publish({ 
+              event: "recvReq", 
+              pushUrl: targetTc.url,
+              requestId, 
+              requestAt,
+              clientId: "", 
+              datas 
+            })
           }
         }
       }
@@ -104,29 +102,28 @@ class Trace {
     let targetTraces = this.getTargetTrace(req.targetRule)
     if (Array.isArray(targetTraces)) {
       for (const tc of targetTraces) {
-        if (this.traceInstanceMap.has(tc)) {
-          const instances = this.traceInstanceMap.get(tc)
-          if (instances.events && !instances.events.includes("sendReq"))
-              continue
-          if (instances.type === "mongodb") {
-            instances.mongoose.updateOne( { requestId }, { $set: datas } )
-          } else if (instances.type === "http") {
-            if (ctx.pushMessage) {
-              ctx.pushMessage.publish({ 
-                event: "sendReq", 
-                requestId, 
-                requestAt,
-                clientId, 
-                datas 
-              })
-            }
+        const targetTc = this.traceInstanceMap.get(tc)
+        if (targetTc.events && !targetTc.events.includes("sendReq"))
+            continue
+        if (targetTc.type === "mongodb") {
+          targetTc.mongoose.updateOne( { requestId }, { $set: datas } ).then( r => r )
+        } else if (targetTc.type === "http") {
+          if (ctx.pushMessage) {
+            ctx.pushMessage.publish({ 
+              event: "sendReq", 
+              pushUrl: targetTc.url,
+              requestId, 
+              requestAt,
+              clientId, 
+              datas 
+            })
           }
         }
       }
     }
     return 
   }
-  logResponse(proxyRes, req, res, ctx) {
+  async logResponse(proxyRes, req, res, ctx) {
     logger.debug('logResponse enter ' + req.targetUrl)
 
     if (this.config.onlyError === true && proxyRes.statusCode === 200) {
@@ -154,27 +151,25 @@ class Trace {
       let targetTraces = this.getTargetTrace(req.targetRule)
       if (Array.isArray(targetTraces)) {
         for (const tc of targetTraces) {
-          if (this.traceInstanceMap.has(tc)) {
-            const instances = this.traceInstanceMap.get(tc)
-            if (instances.events && !instances.events.includes("response"))
-                continue
-            if (instances.type === "mongodb") {
-              await instances.mongoose.updateOne( { requestId }, { $set: datas } )
-            } else if (instances.type === "http") {
-              if (ctx.pushMessage) {
-                ctx.pushMessage.publish({ 
-                  event: "response", 
-                  requestId, 
-                  requestAt,
-                  clientId, 
-                  datas 
-                })
-              }
+          const targetTc = this.traceInstanceMap.get(tc)
+          if (targetTc.events && !targetTc.events.includes("response"))
+              continue
+          if (targetTc.type === "mongodb") {
+            targetTc.mongoose.updateOne( { requestId }, { $set: datas } ).then( r => r )
+          } else if (targetTc.type === "http") {
+            if (ctx.pushMessage) {
+              ctx.pushMessage.publish({ 
+                event: "response", 
+                pushUrl: targetTc.url,
+                requestId, 
+                requestAt,
+                clientId, 
+                datas 
+              })
             }
           }
         }
       }
-      res.end(body)
     })
   }
 }

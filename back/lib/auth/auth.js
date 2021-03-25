@@ -23,14 +23,14 @@ module.exports =function (req, res) {
   let access_token = getAccessTokenByRequest({ headers: req.headers, query })
   if (access_token[0] === false) return Promise.reject(access_token[1])
   access_token = access_token[1]
-  return axios.get(`${process.env.TMS_AUTH_HTTP_URL}?access_token=${access_token}`).then(rsp => {
+  return axios.get(`${process.env.TMS_AUTH_HTTPAUTH_URL || process.env.TMS_AUTH_HTTP_URL}?access_token=${access_token}`).then(rsp => {
     if (rsp.data.code !== 0) {
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
       res.end(JSON.stringify(rsp.data))
-      return Promise.reject(rsp.data)
+      return rsp.data
     }
     const client = rsp.data.result
     const clientId = client["id"]
-    return clientId
+    return { code: 0, clientId }
   })
 }

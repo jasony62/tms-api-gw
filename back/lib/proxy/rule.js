@@ -62,7 +62,6 @@ HttpProxyRules.prototype.match = function match(req) {
     }
   }
   req.targetRule = targetRule
-  console.log(0.111, targetRule)
   req.urlPrefix = urlPrefix
   req.originUrl = path
   req.targetUrl = target + req.url

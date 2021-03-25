@@ -53,7 +53,6 @@ module.exports = {
     enable: process.env.TMS_AUTH_ENABLE === "true" ? true : false,
     http: {
       type: "http",
-      path: process.env.TMS_AUTH_HTTP_PATH || false,
       query: process.env.TMS_AUTH_HTTP_QUERY ? JSON.parse(process.env.TMS_AUTH_HTTP_QUERY) : ['access_token', 'access_token'],
       url: process.env.TMS_AUTH_HTTP_URL || "http://localhost/auth/token",
       clientIdField: process.env.TMS_AUTH_HTTP_CLIENTIDFIELD || "id",
@@ -61,12 +60,10 @@ module.exports = {
     httpPortal: {
       type: "file",
       path: process.env.TMS_AUTH_HTTPPORT_PATH,
-      clientIdField: process.env.TMS_AUTH_HTTPPOR_CLIENTIDFIELD || "id",
     },
     httpService: {
       type: "file",
       path: process.env.TMS_AUTH_HTTPSV_PATH,
-      clientIdField: process.env.TMS_AUTH_HTTPSER_CLIENTIDFIELD || "id",
     },
     default: ["http"]
   },
