@@ -49,3 +49,11 @@ services:
       # - TMS_SENDMESSAGE_REDIS_PORT=6399
       # app name
       # - TMS_APP_NAME=***
+      #0401 redis 密码
+      # - TMS_SENDMESSAGE_REDIS_PWD=8811aa..
+      # 0401 门户鉴权 TMS_AUTH_HTTPAUTH_URL 默认账号管理地址
+      # - TMS_AUTH_HTTPPORT_PATH=./lib/auth/auth.js
+      # - TMS_AUTH_HTTPAUTH_URL=
+      # 0401 服务商鉴权 TMS_AUTH_HTTPSER_URL 账号管理地址
+      # - TMS_AUTH_HTTPSV_PATH=./lib/auth/serviceAuth.js
+      # - TMS_AUTH_HTTPSER_URL=
