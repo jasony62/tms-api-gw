@@ -22,37 +22,37 @@ class Gateway {
     })
     // 准备发送请求
     proxy.on('proxyReq', async (proxyReq, req, res, options) => {
-      this.ctx.emitter.emit('proxyReq', proxyReq, req, res, options)
+      this.ctx.emitter.emit('proxyReq', proxyReq, req, res, options, this.ctx)
     })
     // 处理获得的响应
     proxy.on('proxyRes', (proxyRes, req, res) => {
-      this.ctx.emitter.emit('proxyRes', proxyRes, req, res)
+      this.ctx.emitter.emit('proxyRes', proxyRes, req, res, this.ctx)
     })
     // 启动http服务
     const app = http.createServer(async (req, res) => {
       // 设置唯一id，便于跟踪
       req.headers['x-request-id'] = uuid()
       req.headers['x-request-at'] = new Date() * 1
-
-      // 记录收到请求的原始信息
-      this.ctx.emitter.emit('recvReq', req, res)
-
+      
       // 匹配路由
       const target = this.rules.match(req)
       if (!target) {
         // 没有匹配的目标直接返回
-        res.writeHead(404, { 'Content-Type': 'text/plain' })
+        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })
         return res.end('Not found')
       }
+
+      // 记录收到请求的原始信息
+      this.ctx.emitter.emit('recvReq', req, res, this.ctx)
 
       // 身份认证
       let clientId
       if (this.ctx.auth) {
         try {
-          clientId = await this.ctx.auth.check(req)
+          clientId = await this.ctx.auth.check(req, res)
         } catch (err) {
           logger.error("auth", req.url, err)
-          res.writeHead(401, { 'Content-Type': 'text/plain' })
+          res.writeHead(401, { 'Content-Type': 'text/plain; charset=utf-8' })
           return res.end(err.msg)
         }
         req.headers['x-request-client'] = clientId
@@ -63,7 +63,7 @@ class Gateway {
         try {
           await this.ctx.quota.check(req)
         } catch (err) {
-          res.writeHead(403, { 'Content-Type': 'text/plain' })
+          res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' })
           return res.end(err.msg)
         }
       }
@@ -86,7 +86,8 @@ Gateway.startup = async function() {
   } catch (e) {
     const http = require('http')
     const app = http.createServer(async (req, res) => {
-      res.writeHead(500, { 'Content-Type': 'text/plain' })
+      logger.error("createGateway", e)
+      res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' })
       return res.end(e.message)
     })
     app.listen(3000, () => {

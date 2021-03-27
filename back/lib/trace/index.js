@@ -1,7 +1,6 @@
 const log4js = require('@log4js-node/log4js-api')
 const logger = log4js.getLogger('tms-api-gw')
 const _ = require('lodash')
-const gatewayConfig = require('../../config/gateway')
 
 function parseBody(req) {
   return new Promise((resolve, reject) => {
@@ -19,18 +18,32 @@ function parseBody(req) {
  * API调用追踪
  */
 class Trace {
-  constructor(model) {
-    this.model = model
+  constructor(config, traceInstanceMap) {
+    this.config = config
+    this.traceInstanceMap = traceInstanceMap
+  }
+  /**
+   * 
+   */
+  getTargetTrace(targetRule) {
+    let targetTraces
+    if (targetRule.trace && Array.isArray(targetRule.trace)) {
+      targetTraces = targetRule.trace
+    } else {
+      targetTraces = this.config.default
+    }
+    return targetTraces
   }
   /**
    * 记录请求的原始信息
    *
    * @param {*} req
    */
-  logRecvReq(req) {
+  async logRecvReq(req, res, ctx) {
     logger.debug('logRecvReq enter')
-    const { method, headers, url } = req
+    const { method, headers, url, targetRule } = req
     const requestId = headers['x-request-id']
+    const requestAt = headers['x-request-at']
     const recvUrl = _.pick(require('url').parse(url, true), [
       'protocol',
       'hostname',
@@ -38,14 +51,40 @@ class Trace {
       'pathname',
       'query'
     ])
-    this.model.create(
-      { requestId, recvUrl, method, recvHeaders: headers },
-      err => {
-        if (err) logger.warn('TraceLog.create', err)
+    const datas = { requestId, recvUrl, method, recvHeaders: headers }
+    
+    let targetTraces = this.getTargetTrace(targetRule)
+    if (Array.isArray(targetTraces)) {
+      for (const tc of targetTraces) {
+        const targetTc = this.traceInstanceMap.get(tc)
+        if (!targetTc.type) targetTc.type = "mongodb"
+        if (targetTc.events && !targetTc.events.includes("recvReq"))
+            continue
+        if (targetTc.type === "mongodb") {
+          targetTc.mongoose.create(
+            datas,
+            err => {
+              if (err) logger.warn('TraceLog.create', err)
+            }
+          )
+        } else if (targetTc.type === "http") {
+          if (ctx.pushMessage) {
+            ctx.pushMessage.publish({ 
+              event: "recvReq", 
+              pushUrl: targetTc.url,
+              requestId, 
+              requestAt,
+              clientId: "", 
+              datas 
+            })
+          }
+        }
       }
-    )
+    }
+
+    return 
   }
-  async logSendReq(proxyReq, req, res, options) {
+  async logSendReq(proxyReq, req, res, options, ctx) {
     logger.debug('logSendReq enter ' + req.originUrl)
     const sendUrl = _.pick(options.target, [
       'protocol',
@@ -55,18 +94,41 @@ class Trace {
     ])
     const requestId = req.headers['x-request-id']
     const clientId = req.headers['x-request-client']
+    const requestAt = req.headers['x-request-at']
 
     let recvBody
     if ('POST' == req.method) recvBody = await parseBody(req)
-    await this.model.updateOne(
-      { requestId },
-      { $set: { clientId, sendUrl, recvBody } }
-    )
+    const datas = { clientId, sendUrl, recvBody }
+
+    let targetTraces = this.getTargetTrace(req.targetRule)
+    if (Array.isArray(targetTraces)) {
+      for (const tc of targetTraces) {
+        const targetTc = this.traceInstanceMap.get(tc)
+        if (!targetTc.type) targetTc.type = "mongodb"
+        if (targetTc.events && !targetTc.events.includes("sendReq"))
+            continue
+        if (targetTc.type === "mongodb") {
+          targetTc.mongoose.updateOne( { requestId }, { $set: datas } ).then( r => r )
+        } else if (targetTc.type === "http") {
+          if (ctx.pushMessage) {
+            ctx.pushMessage.publish({ 
+              event: "sendReq", 
+              pushUrl: targetTc.url,
+              requestId, 
+              requestAt,
+              clientId, 
+              datas 
+            })
+          }
+        }
+      }
+    }
+    return 
   }
-  logResponse(proxyRes, req, res) {
+  async logResponse(proxyRes, req, res, ctx) {
     logger.debug('logResponse enter ' + req.targetUrl)
 
-    if (gatewayConfig.trace.onlyError === true && proxyRes.statusCode === 200) {
+    if (this.config.onlyError === true && proxyRes.statusCode === 200) {
       return
     }
 
@@ -76,23 +138,41 @@ class Trace {
     })
     proxyRes.on('end', async () => {
       body = Buffer.concat(body).toString()
+      const clientId = req.headers['x-request-client']
       const requestId = req.headers['x-request-id']
       const requestAt = req.headers['x-request-at']
       const elapseMs = new Date() * 1 - requestAt
       const { statusCode, statusMessage, headers } = proxyRes
-      await this.model.updateOne(
-        { requestId },
-        {
-          $set: {
-            statusCode,
-            statusMessage,
-            responseHeaders: headers,
-            responseBody: body,
-            elapseMs
+      const datas = {
+        statusCode,
+        statusMessage,
+        responseHeaders: headers,
+        responseBody: body,
+        elapseMs
+      }
+      let targetTraces = this.getTargetTrace(req.targetRule)
+      if (Array.isArray(targetTraces)) {
+        for (const tc of targetTraces) {
+          const targetTc = this.traceInstanceMap.get(tc)
+          if (!targetTc.type) targetTc.type = "mongodb"
+          if (targetTc.events && !targetTc.events.includes("response"))
+              continue
+          if (targetTc.type === "mongodb") {
+            targetTc.mongoose.updateOne( { requestId }, { $set: datas } ).then( r => r )
+          } else if (targetTc.type === "http") {
+            if (ctx.pushMessage) {
+              ctx.pushMessage.publish({ 
+                event: "response", 
+                pushUrl: targetTc.url,
+                requestId, 
+                requestAt,
+                clientId, 
+                datas 
+              })
+            }
           }
         }
-      )
-      res.end(body)
+      }
     })
   }
 }
@@ -136,15 +216,26 @@ Trace.createModel = function(mongoose) {
 
   return Model
 }
-
 module.exports = (function() {
   let _instance
-  return function(emitter, mongoose) {
+  return async function(emitter, config) {
     if (_instance) return _instance
 
-    let Model = Trace.createModel(mongoose)
+    const MongoContext = require('../mongo')
+    let { enable, onlyError, default: defaultTrace, ...traces } = config
 
-    _instance = new Trace(Model)
+    let traceInstanceMap = new Map()
+    for (const key in traces) {
+      const val = traces[key]
+      if (val.type === "mongodb") {
+        const mongo = await MongoContext.ins(val)
+        const mongodbModel = Trace.createModel(mongo.mongoose)
+        val.mongoose = mongodbModel
+      }
+      traceInstanceMap.set(key, val)
+    }
+    
+    _instance = new Trace(config, traceInstanceMap)
 
     emitter.on('recvReq', _instance.logRecvReq.bind(_instance))
     emitter.on('proxyReq', _instance.logSendReq.bind(_instance))

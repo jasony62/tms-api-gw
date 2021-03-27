@@ -103,9 +103,9 @@ class Quota {
         let diff = oRequestAt - oLatestAt
         const minuLimit = _.get(rateLimit, "minute.limit", null)
         if (diff < 60000 && !isNaN(minuLimit) && parseInt(minuLimit) > 0) {
-          if (minuLimit <= doc.minute) {
+          if (parseInt(minuLimit) <= doc.minute) {
             logger.warn("quota check minuLimit", api)
-            return Promise.reject({msg: `本接口执行流量控制，限制次数为[${minuLimit}]，周期为[秒]，当前次数[${doc.minute}]`})
+            return Promise.reject({msg: `本接口执行流量控制，限制次数为[${minuLimit}]，周期为[分]，当前次数[${doc.minute}]`})
           }
         }
       }

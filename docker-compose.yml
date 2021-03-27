@@ -28,10 +28,31 @@ services:
       # - TMS_QUOTA_ENABLE=true
       # 是否记录访问日志
       # - TMS_TRACE_ENABLE=true
+      # 日志是否发送到第三方平台地址
+      # - TMS_TRACE_SEND_URL=http://localhost
       # 访问日志是否只记录错误日志
       # - TMS_TRACE_ENABLE_ONLYERROR=false
       # 是否鉴权
       # - TMS_AUTH_ENABLE=true
       # 鉴权接口
       # - TMS_AUTH_HTTP_URL=http://localhost/oauth/ue/auth/authorize
-      # - TMS_AUTH_HTTP_PATH=./lib/auth/auth.js
+      # 配额 0 不检查
+      # - TMS_QUOTA_RATELIMIT_MINUTE=0
+      # 0318 开启消息发送进程
+      # - TMS_SENDMESSAGE_ENABLE=true
+      # 0318 第三方储存日志平台地址
+      # - TMS_TRACE_SEND_URL=http://127.0.0.1:3533/etd/api/dev189/gwLog
+      # - TMS_TRACE_SEND_EVENTS=["response"]
+      # 0318 redis
+      # - TMS_SENDMESSAGE_REDIS_HOST=localhost
+      # - TMS_SENDMESSAGE_REDIS_PORT=6399
+      # app name
+      # - TMS_APP_NAME=***
+      #0401 redis 密码
+      # - TMS_SENDMESSAGE_REDIS_PWD=8811aa..
+      # 0401 门户鉴权 TMS_AUTH_HTTPAUTH_URL 默认账号管理地址
+      # - TMS_AUTH_HTTPPORT_PATH=./lib/auth/auth.js
+      # - TMS_AUTH_HTTPAUTH_URL=
+      # 0401 服务商鉴权 TMS_AUTH_HTTPSER_URL 账号管理地址
+      # - TMS_AUTH_HTTPSV_PATH=./lib/auth/serviceAuth.js
+      # - TMS_AUTH_HTTPSER_URL=

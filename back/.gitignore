@@ -5,3 +5,4 @@ public/
 .env.*
 config/gateway.js
 config/log4js.js
+docker-compose.*.yml
