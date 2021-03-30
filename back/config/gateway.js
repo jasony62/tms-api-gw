@@ -27,7 +27,7 @@ module.exports = {
     },
     http: {
       type: "http",
-      events: process.env.TMS_TRACE_SEND_EVENTS ? JSON.parse(process.env.TMS_TRACE_SEND_EVENTS) : ["recvReq", "sendReq", "response"],
+      events: process.env.TMS_TRACE_SEND_EVENTS ? JSON.parse(process.env.TMS_TRACE_SEND_EVENTS) : ["response"], //["recvReq", "sendReq", "response"]
       url: process.env.TMS_TRACE_SEND_URL || ""
     },
     default: ["mongodb"]
@@ -59,11 +59,15 @@ module.exports = {
     },
     httpPortal: {
       type: "file",
-      path: process.env.TMS_AUTH_HTTPPORT_PATH,
+      path: "./lib/auth/auth.js",
     },
     httpService: {
       type: "file",
-      path: process.env.TMS_AUTH_HTTPSV_PATH,
+      path: "./lib/auth/serviceAuth.js",
+    },
+    noauth: {
+      type: "file",
+      path: "./lib/auth/noAuth.js",
     },
     default: ["http"]
   },
