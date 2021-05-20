@@ -26,7 +26,8 @@ module.exports = {
     http: {
       type: "http",
       // events: ["recvReq", "sendReq", "response"],
-      url: "http://localhost:81"
+      url: "http://localhost:81",
+      before: '' // './*.js' or function(){}  数据发送前的前置操作
     },
     default: ["mongodb"]
   },
@@ -49,12 +50,13 @@ module.exports = {
     enable: false,
     onlyError: false,
     http: {
+      type: "http",
       query: ['access_token', 'access_token'],
       url: `http://${host}:3001/auth/client`
     },
     httpService: {
       type: "file",
-      path: `http://${host}:3002/auth/client`,
+      path: `./lib/auth/httpService`,
     },
     default: ["http"]
   },

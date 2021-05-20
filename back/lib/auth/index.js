@@ -45,8 +45,8 @@ class HttpAuth {
               if (errMsg !== "") errMsg += " 或 "
               errMsg += rst.msg
             }
-          } else return Promise.reject({msg: "指定的鉴权方式不是一个方法"})
-        } else return Promise.reject({msg: "指定的鉴权方法不存在"})
+          } else return Promise.reject({msg: "指定的鉴权方式不是一个函数"})
+        } else return Promise.reject({msg: "指定的鉴权方式不存在"})
       } else if (tarAth.type === "http") {
         let param = [tarAth.query[0], query[tarAth.query[1]]]
         param = param.join('=')

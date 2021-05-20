@@ -34,7 +34,7 @@ const logger = log4js.getLogger('tms-api-gw-sendMessage_send')
 async function sendMsg(message) {
   //
   message = JSON.parse(message)
-  const { event, pushUrl, requestId, requestAt, clientId = "", datas } = message
+  const { event, pushUrl, requestId, requestAt, clientId = "", datas, headers: oHeaders } = message
   if (!requestId) return [false, "未找到requestId"]
   //
   const options = { 
@@ -44,13 +44,8 @@ async function sendMsg(message) {
     maxContentLength: Infinity,
   }
   const instance = axios.create(options)
-  let headers = {
-    "x-request-event": event,
-    "x-request-id": requestId,
-    "x-request-at": requestAt,
-  }
+  let headers = Object.assign({}, oHeaders, {"x-request-event": event, "x-request-id": requestId, "x-request-at": requestAt})
   if (clientId) headers["x-request-client"] = clientId
-  if (appName) headers["x-gateway-name"] = appName
 
   return instance
     .post(pushUrl, datas, { headers })
@@ -90,11 +85,11 @@ async function start() {
 })
   //监听订阅成功事件
   RedisClint.on("subscribe", function (channel, count) {
-      logger.info("client subscribed to " + channel + "," + count + "total subscriptions")
+      logger.info("客户端订阅消息频道 " + channel + ", " + count + " 条订阅")
   })
   //监听取消订阅事件
   RedisClint.on("unsubscribe", function (channel, count) {
-      logger.info("client unsubscribed from" + channel + ", " + count + " total subscriptions")
+      logger.info("客户端取消订阅消息频道" + channel + ", " + count + " 条订阅")
   })
 }
 

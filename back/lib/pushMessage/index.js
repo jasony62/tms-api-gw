@@ -10,7 +10,7 @@ const _ = require('lodash')
 function startProcess() {
   logger.info('已完成框架初始化')
   //
-  logger.info('开始启动消息发送线程')
+  logger.info('开始启动消息发送线程……')
   let Replica_Child_Process = cp.spawn('node', ['./lib/pushMessage/send.js'], {
     // detached: true,
     // stdio: 'ignore',
