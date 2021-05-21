@@ -10,7 +10,7 @@ module.exports = {
   port,
   name: "api-gw",
   proxy: {
-    rules: {"/a/b":"/c/d", "/a2/b2":{"target":"/c2/d2","auth":["httpService"],"trace":["mongodb","http"]}},
+    rules: {"/a/b":"/c/d", "/a2/b2":{"target":"/c2/d2","auth":["httpService"],"trace":["mongodb","http"],"transformRequest":["***"]}},
     default: `http://${host}:1234`
   },
   trace: {
@@ -59,6 +59,11 @@ module.exports = {
       path: `./lib/auth/httpService`,
     },
     default: ["http"]
+  },
+  transformRequest: { // 支持在转发请求前修改请求
+    enable: false,
+    getToken: "./lib/transformRequest/*.js", // ‘./*.js’ or function() {}
+    default: []
   },
   pushMessage: { // sendMessage
     enable: true,

@@ -14,6 +14,11 @@ module.exports = {
     rules: process.env.TMS_PROXY_RULES ? JSON.parse(process.env.TMS_PROXY_RULES) : {},
     default: `http://localhost:1234`
   },
+  transformRequest: {
+    enable: process.env.TMS_TRACEFORNREQ_ENABLE === "false" ? false : true,
+    getToken: "./lib/transformRequest/getToken.js",
+    default: []
+  },
   trace: { // 日志
     enable: process.env.TMS_TRACE_ENABLE === "false" ? false : true,
     onlyError:  process.env.TMS_TRACE_ENABLE_ONLYERROR === "true" ? true : false,

@@ -35,7 +35,7 @@ class Gateway {
       req.headers['x-request-at'] = new Date() * 1
       
       // 匹配路由
-      const target = this.rules.match(req)
+      let target = this.rules.match(req)
       if (!target) {
         // 没有匹配的目标直接返回
         res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })
@@ -68,6 +68,17 @@ class Gateway {
         }
       }
 
+      // 转换请求
+      if (this.ctx.transformRequest) {
+        try {
+          const rst = await this.ctx.transformRequest.check(clientId, req, target)
+          if (rst.target) target = rst.target
+        } catch (err) {
+          logger.error("transformRequest", req.url, err)
+          res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' })
+          return res.end(err.msg)
+        }
+      }
       // 执行反向代理
       proxy.web(req, res, { target })
 

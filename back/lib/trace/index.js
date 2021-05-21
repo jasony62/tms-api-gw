@@ -16,6 +16,16 @@ function parseBody(req) {
   })
 }
 
+function _getTargetTrace(TraceObj, targetRule) {
+  let targetTraces
+  if (targetRule.trace && Array.isArray(targetRule.trace)) {
+    targetTraces = targetRule.trace
+  } else {
+    targetTraces = TraceObj.config.default
+  }
+  return targetTraces
+}
+
 async function _pushMessage(targetTc, ctx, req, event, pushUrl, datas, oHeaders = {}) {
   const { headers } = req
   const requestId = headers['x-request-id']
@@ -49,7 +59,9 @@ async function _pushMessage(targetTc, ctx, req, event, pushUrl, datas, oHeaders 
   return true
 }
 
-async function _eventTrace(req, ctx, TraceObj, targetTraces, event, datas) {
+async function _eventTrace(req, ctx, TraceObj, event, datas) {
+  let targetTraces = _getTargetTrace(TraceObj, req.targetRule)
+
   const { headers } = req
   const requestId = headers['x-request-id']
   if (Array.isArray(targetTraces)) {
@@ -87,18 +99,6 @@ class Trace {
     this.traceInstanceMap = traceInstanceMap
   }
   /**
-   * 
-   */
-  getTargetTrace(targetRule) {
-    let targetTraces
-    if (targetRule.trace && Array.isArray(targetRule.trace)) {
-      targetTraces = targetRule.trace
-    } else {
-      targetTraces = this.config.default
-    }
-    return targetTraces
-  }
-  /**
    * 记录请求的原始信息
    *
    * @param {*} req
@@ -116,8 +116,7 @@ class Trace {
     ])
     const datas = { requestId, recvUrl, method, recvHeaders: headers }
     
-    let targetTraces = this.getTargetTrace(targetRule)
-    _eventTrace(req, ctx, this, targetTraces, "recvReq", datas)
+    _eventTrace(req, ctx, this, "recvReq", datas)
 
     return 
   }
@@ -127,16 +126,16 @@ class Trace {
       'protocol',
       'hostname',
       'port',
-      'pathname'
+      'pathname',
+      'query'
     ])
     const clientId = req.headers['x-request-client']
 
     let recvBody
     if ('POST' == req.method) recvBody = await parseBody(req)
-    const datas = { clientId, sendUrl, recvBody }
+    const datas = { clientId, sendUrl, sendHeaders: req.headers, recvBody }
 
-    let targetTraces = this.getTargetTrace(req.targetRule)
-    _eventTrace(req, ctx, this, targetTraces, "sendReq", datas)
+    _eventTrace(req, ctx, this, "sendReq", datas)
     
     return 
   }
@@ -153,8 +152,6 @@ class Trace {
     })
     proxyRes.on('end', async () => {
       body = Buffer.concat(body).toString()
-      const clientId = req.headers['x-request-client']
-      const requestId = req.headers['x-request-id']
       const requestAt = req.headers['x-request-at']
       const elapseMs = new Date() * 1 - requestAt
       const { statusCode, statusMessage, headers } = proxyRes
@@ -165,8 +162,7 @@ class Trace {
         responseBody: body,
         elapseMs
       }
-      let targetTraces = this.getTargetTrace(req.targetRule)
-      _eventTrace(req, ctx, this, targetTraces, "response", datas)
+      _eventTrace(req, ctx, this, "response", datas)
     })
   }
 }
@@ -198,6 +194,7 @@ Trace.createModel = function(mongoose) {
           pathname: String,
           query: Object
         },
+        sendHeaders: Object,
         statusCode: { type: Number, default: 0 },
         statusMessage: { type: String, default: '' },
         responseHeaders: { type: Object, default: {} },
