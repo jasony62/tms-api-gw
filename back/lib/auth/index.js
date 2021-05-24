@@ -1,6 +1,7 @@
 const axios = require('axios')
 const fs = require("fs")
 const PATH = require("path")
+const _ = require("lodash")
 
 class HttpAuth {
   constructor(config, authInstanceMap) {
@@ -55,9 +56,11 @@ class HttpAuth {
           if (errMsg !== "") errMsg += " 或 "
           errMsg += rst.data.msg
         } else {
-          const client = rst.data.result
-          const clientId = client[tarAth.clientIdField]
-          return Promise.resolve(clientId)
+          const clientId = _.get(rst.data.result, tarAth.clientIdField, null)
+          if (!clientId) {
+            if (errMsg !== "") errMsg += " 或 "
+            errMsg += `获取${tarAth.clientIdField}失败`
+          } else return Promise.resolve(clientId)
         }
       }
     }
