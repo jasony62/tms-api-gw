@@ -3,6 +3,7 @@ const logger = log4js.getLogger('tms-api-gw_idx')
 const ProxyRules = require('./proxy/rule')
 const uuid = require('uuid')
 const Context = require('./context')
+const quota = require('./quota')
 
 class Gateway {
   constructor(ctx) {
@@ -52,6 +53,7 @@ class Gateway {
           clientId = await this.ctx.auth.check(req, res)
         } catch (err) {
           logger.error("auth", req.url, err)
+          this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "auth", err)
           res.writeHead(401, { 'Content-Type': 'text/plain; charset=utf-8' })
           return res.end(err.msg)
         }
@@ -63,6 +65,7 @@ class Gateway {
         try {
           await this.ctx.quota.check(req)
         } catch (err) {
+          this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "quota", err)
           res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' })
           return res.end(err.msg)
         }

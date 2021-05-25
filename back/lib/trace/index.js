@@ -114,12 +114,13 @@ class Trace {
       'pathname',
       'query'
     ])
-    const datas = { requestId, recvUrl, method, recvHeaders: headers }
     
+    const datas = { requestId, recvUrl, method, recvHeaders: headers }
     _eventTrace(req, ctx, this, "recvReq", datas)
 
     return 
   }
+
   async logSendReq(proxyReq, req, res, options, ctx) {
     logger.debug('logSendReq enter ' + req.originUrl)
     const sendUrl = _.pick(options.target, [
@@ -139,8 +140,9 @@ class Trace {
     
     return 
   }
+
   async logResponse(proxyRes, req, res, ctx) {
-    logger.debug('logResponse enter ' + req.targetUrl)
+    logger.debug('logResponse enter ' + req.originUrl)
 
     if (this.config.onlyError === true && proxyRes.statusCode === 200) {
       return
@@ -164,6 +166,20 @@ class Trace {
       }
       _eventTrace(req, ctx, this, "response", datas)
     })
+  }
+
+  async logCheckpointReq(req, res, ctx, type, error) {
+    if (!type) 
+      return 
+
+    let checkpointStatus = {}
+    checkpointStatus[type] = error.msg
+
+    const clientId = req.headers['x-request-client']
+    const datas = { checkpointStatus, clientId }
+    _eventTrace(req, ctx, this, "checkpoint", datas)
+
+    return 
   }
 }
 Trace.createModel = function(mongoose) {
@@ -199,7 +215,11 @@ Trace.createModel = function(mongoose) {
         statusMessage: { type: String, default: '' },
         responseHeaders: { type: Object, default: {} },
         responseBody: { type: String, default: '' },
-        elapseMs: { type: Number, default: 0 }
+        elapseMs: { type: Number, default: 0 },
+        checkpointStatus: {
+          auth: String,
+          quota: String
+        }
       },
       { collection: 'trace_log' }
     )
@@ -229,6 +249,7 @@ module.exports = (function() {
     _instance = new Trace(config, traceInstanceMap)
 
     emitter.on('recvReq', _instance.logRecvReq.bind(_instance))
+    emitter.on('checkpointReq', _instance.logCheckpointReq.bind(_instance))
     emitter.on('proxyReq', _instance.logSendReq.bind(_instance))
     emitter.on('proxyRes', _instance.logResponse.bind(_instance))
 

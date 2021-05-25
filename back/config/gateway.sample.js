@@ -25,7 +25,7 @@ module.exports = {
     },
     http: {
       type: "http",
-      // events: ["recvReq", "sendReq", "response"],
+      // events: ["recvReq", "sendReq", "response", "checkpoint"],
       url: "http://localhost:81",
       before: '' // './*.js' or function(){}  数据发送前的前置操作
     },

@@ -29,11 +29,11 @@ module.exports = {
       host: process.env.TMS_TRACE_MONGODB_HOST || host,
       port: parseInt(process.env.TMS_TRACE_MONGODB_PORT) || 27017,
       database: process.env.TMS_TRACE_MONGODB_DATABASE || 'tms-api-gw-jh',
-      events: process.env.TMS_TRACE_MONGO_EVENTS ? JSON.parse(process.env.TMS_TRACE_MONGO_EVENTS) : ["recvReq", "sendReq", "response"]
+      events: process.env.TMS_TRACE_MONGO_EVENTS ? JSON.parse(process.env.TMS_TRACE_MONGO_EVENTS) : ["recvReq", "sendReq", "response", "checkpoint"]
     },
     http: {
       type: "http",
-      events: process.env.TMS_TRACE_SEND_EVENTS ? JSON.parse(process.env.TMS_TRACE_SEND_EVENTS) : ["response"], //["recvReq", "sendReq", "response"]
+      events: process.env.TMS_TRACE_SEND_EVENTS ? JSON.parse(process.env.TMS_TRACE_SEND_EVENTS) : ["response"], //["recvReq", "sendReq", "response", "checkpoint"]
       url: process.env.TMS_TRACE_SEND_URL || "",
       before: './lib/trace/httpBeforeFun.js'
     },
