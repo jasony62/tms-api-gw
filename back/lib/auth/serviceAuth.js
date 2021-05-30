@@ -1,3 +1,5 @@
+// 服务商网关
+
 const axios = require('axios')
 /**
  * 获得请求中传递的access_token
@@ -32,7 +34,10 @@ module.exports =function (req, res) {
     if (!serviceAuthRid.includes(client.data.rid)) {
       return {code: 1001, msg: "权限错误"}
     }
-    const clientId = client["id"]
+
+    req.clientObj = client
+
+    const clientId = client.data.uid
     return { code: 0, clientId }
   })
 }

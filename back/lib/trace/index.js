@@ -32,6 +32,8 @@ async function _pushMessage(targetTc, ctx, req, event, pushUrl, datas, oHeaders 
   const requestAt = headers['x-request-at']
   let clientId = req.headers['x-request-client'] || ""
 
+  let pushHeaders = Object.assign({}, {"x-request-event": event, "x-request-id": requestId, "x-request-at": requestAt, "x-request-client": clientId}, oHeaders)
+
   let beforeFunc
   if (targetTc.before && typeof targetTc.before === "string") {
     const authPath = PATH.resolve(targetTc.before)
@@ -42,7 +44,7 @@ async function _pushMessage(targetTc, ctx, req, event, pushUrl, datas, oHeaders 
     beforeFunc = targetTc.before
   }
   if (typeof beforeFunc === "function") {
-    await beforeFunc(req, event, clientId, oHeaders, datas)
+    await beforeFunc(req, event, clientId, pushHeaders, datas)
   }
 
   if (ctx.pushMessage) {
@@ -52,7 +54,7 @@ async function _pushMessage(targetTc, ctx, req, event, pushUrl, datas, oHeaders 
       requestId, 
       requestAt,
       clientId, 
-      headers: oHeaders,
+      headers: pushHeaders,
       datas
     })
   }

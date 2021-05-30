@@ -34,8 +34,8 @@ const logger = log4js.getLogger('tms-api-gw-sendMessage_send')
 async function sendMsg(message) {
   //
   message = JSON.parse(message)
-  const { event, pushUrl, requestId, requestAt, clientId = "", datas, headers: oHeaders } = message
-  if (!requestId) return [false, "未找到requestId"]
+  const { event, pushUrl, requestId, datas, headers: oHeaders = {} } = message
+  if (!pushUrl) return [false, "未找到推送地址"]
   //
   const options = { 
     adapter,
@@ -44,8 +44,7 @@ async function sendMsg(message) {
     maxContentLength: Infinity,
   }
   const instance = axios.create(options)
-  let headers = Object.assign({}, oHeaders, {"x-request-event": event, "x-request-id": requestId, "x-request-at": requestAt})
-  if (clientId) headers["x-request-client"] = clientId
+  const headers = Object.assign({}, oHeaders)
 
   return instance
     .post(pushUrl, datas, { headers })
