@@ -72,6 +72,10 @@ module.exports = {
       type: "file",
       path: "./lib/auth/serviceAuth.js",
     },
+    httpYz: {
+      type: "file",
+      path: "./lib/auth/yz_auth.js",
+    },
     noauth: {
       type: "file",
       path: "./lib/auth/noAuth.js",
