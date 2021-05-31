@@ -61,7 +61,7 @@ async function _pushMessage(targetTc, ctx, req, event, pushUrl, datas, oHeaders 
   return true
 }
 
-async function _eventTrace(req, ctx, TraceObj, event, datas) {
+async function _eventTrace(req, ctx, TraceObj, event, datas, options = {}) {
   let targetTraces = _getTargetTrace(TraceObj, req.targetRule)
 
   const { headers } = req
@@ -81,9 +81,15 @@ async function _eventTrace(req, ctx, TraceObj, event, datas) {
             }
           )
         } else {
+          if (event === "response" && targetTc.onlyError === true && options.proxyRes.statusCode === 200) { // 只记录错误日志
+            continue
+          }
           targetTc.mongoose.updateOne( { requestId }, { $set: datas } ).then( r => r )
         }
       } else if (targetTc.type === "http") {
+        if (event === "response" && targetTc.onlyError === true && options.proxyRes.statusCode === 200) { // 只记录错误日志
+          continue
+        }
         _pushMessage(targetTc, ctx, req, event, targetTc.url, datas)
       }
     }
@@ -146,10 +152,6 @@ class Trace {
   async logResponse(proxyRes, req, res, ctx) {
     logger.debug('logResponse enter ' + req.originUrl)
 
-    if (this.config.onlyError === true && proxyRes.statusCode === 200) {
-      return
-    }
-
     let body = []
     proxyRes.on('data', chunk => {
       body.push(chunk)
@@ -166,7 +168,7 @@ class Trace {
         responseBody: body,
         elapseMs
       }
-      _eventTrace(req, ctx, this, "response", datas)
+      _eventTrace(req, ctx, this, "response", datas, { proxyRes: { statusCode, statusMessage, headers } })
     })
   }
 
@@ -235,7 +237,7 @@ module.exports = (function() {
     if (_instance) return _instance
 
     const MongoContext = require('../mongo')
-    let { enable, onlyError, default: defaultTrace, ...traces } = config
+    let { enable, default: defaultTrace, ...traces } = config
 
     let traceInstanceMap = new Map()
     for (const key in traces) {

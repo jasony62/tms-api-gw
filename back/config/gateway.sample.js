@@ -17,6 +17,7 @@ module.exports = {
     enable: true,
     mongodb: {
       type: "mongodb",
+      onlyError: false,
       user: false,
       password: false,
       host,
@@ -25,6 +26,7 @@ module.exports = {
     },
     http: {
       type: "http",
+      onlyError: false,
       // events: ["recvReq", "sendReq", "response", "checkpoint"],
       url: "http://localhost:81",
       before: '' // './*.js' or function(){}  数据发送前的前置操作
@@ -48,7 +50,6 @@ module.exports = {
   },
   auth: {
     enable: false,
-    onlyError: false,
     http: {
       type: "http",
       query: ['access_token', 'access_token'],
