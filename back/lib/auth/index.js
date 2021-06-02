@@ -26,7 +26,7 @@ class HttpAuth {
    * @param {*} res 
    * @returns 
    */
-  async check(req, res) {
+  async check(req, res, redundancyOptions) {
     //
     const targetAuths = this.getTargetAuth(req.targetRule)
     const { query } = require('url').parse(req.url, true)
@@ -39,7 +39,7 @@ class HttpAuth {
         if (fs.existsSync(authPath)) {
           const authFunc = require(authPath)
           if (typeof authFunc === "function") {
-            const rst = await authFunc(req, res)
+            const rst = await authFunc(req, res, redundancyOptions)
             if (rst.code === 0) {
               return Promise.resolve(rst.clientId)
             } else {
@@ -60,7 +60,10 @@ class HttpAuth {
           if (!clientId) {
             if (errMsg !== "") errMsg += " 或 "
             errMsg += `获取${tarAth.clientIdField}失败`
-          } else return Promise.resolve(clientId)
+          } else {
+            redundancyOptions.client = rst.data.result
+            return Promise.resolve(clientId)
+          }
         }
       }
     }

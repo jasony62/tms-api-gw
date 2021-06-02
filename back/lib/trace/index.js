@@ -240,12 +240,19 @@ module.exports = (function() {
     let { enable, default: defaultTrace, ...traces } = config
 
     let traceInstanceMap = new Map()
+    let mongodbModelMap = new Map()
     for (const key in traces) {
       const val = traces[key]
       if (val.type === "mongodb") {
-        const mongo = await MongoContext.ins(val)
-        const mongodbModel = Trace.createModel(mongo.mongoose)
-        val.mongoose = mongodbModel
+        const mongoName = `${val.host}:${val.port}`
+        if (!mongodbModelMap.get(mongoName)) {
+          const mongo = await MongoContext.ins(val)
+          const mongodbModel = Trace.createModel(mongo.mongoose)
+          mongodbModelMap.set(mongoName, mongodbModel)
+          val.mongoose = mongodbModel
+        } else {
+          val.mongoose = mongodbModelMap.get(mongoName)
+        }
       }
       traceInstanceMap.set(key, val)
     }

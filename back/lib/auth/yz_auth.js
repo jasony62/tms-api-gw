@@ -20,7 +20,7 @@ function getAccessTokenByRequest(request) {
   return [true, access_token]
 }
 
-module.exports =function (req, res) {
+module.exports =function (req, res, redundancyOptions) {
   const { query } = require('url').parse(req.url, true)
   let access_token = getAccessTokenByRequest({ headers: req.headers, query })
   if (access_token[0] === false) return Promise.reject(access_token[1])
@@ -32,6 +32,7 @@ module.exports =function (req, res) {
 
     const client = rsp.data.result
     req.clientObj = client
+    redundancyOptions.client = client
 
     const clientId = client.data.uid
     return { code: 0, clientId }

@@ -17,6 +17,7 @@ module.exports = {
   transformRequest: {
     enable: process.env.TMS_TRACEFORNREQ_ENABLE === "false" ? false : true,
     getToken: "./lib/transformRequest/getToken.js",
+    callticket_down: "./lib/transformRequest/callticket_down.js",
     default: []
   },
   trace: { // 日志
@@ -30,6 +31,15 @@ module.exports = {
       port: parseInt(process.env.TMS_TRACE_MONGODB_PORT) || 27017,
       database: process.env.TMS_TRACE_MONGODB_DATABASE || 'tms-api-gw-jh',
       events: process.env.TMS_TRACE_MONGO_EVENTS ? JSON.parse(process.env.TMS_TRACE_MONGO_EVENTS) : ["recvReq", "sendReq", "response", "checkpoint"]
+    },
+    mongodb_callticket: {
+      type: "mongodb",
+      onlyError: true,
+      user: process.env.TMS_TRACE_MONGODB_USER || false,
+      password: process.env.TMS_TRACE_MONGODB_PASSWORD || false,
+      host: process.env.TMS_TRACE_MONGODB_HOST || host,
+      port: parseInt(process.env.TMS_TRACE_MONGODB_PORT) || 27017,
+      database: process.env.TMS_TRACE_MONGODB_DATABASE || 'tms-api-gw-jh',
     },
     http: {
       type: "http",

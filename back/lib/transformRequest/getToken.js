@@ -4,7 +4,7 @@ module.exports = function(clientId, req, target) {
   const [appkey, secret] = Buffer.from(Authorization.substr("Basic ".length), "base64").toString("UTF-8").split(":")
   delete headers["authorization"]
   headers["content-type"] = "application/json; charset=utf-8"
-console.log(req.request)
+  
   // const url = new URL(req.url, "http://localhost")
   // url.searchParams.set("appkey", appkey)
   // url.searchParams.set("secret", secret)

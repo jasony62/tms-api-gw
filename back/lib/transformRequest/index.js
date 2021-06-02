@@ -24,7 +24,7 @@ class HttpTransformReq {
    * @param {*} target 
    * @returns 
    */
-  async check(clientId, req, target) {
+  async check(clientId, req, target, redundancyOptions) {
     const targetTransforms = this.getTargetAuth(req.targetRule)
     for (const t of targetTransforms) {
       const tarArf = this.transformInstanceMap.get(t)
@@ -38,7 +38,7 @@ class HttpTransformReq {
         func = tarArf
       }
       if (typeof func === "function") {
-        const rst = await func(clientId, req, target)
+        const rst = await func(clientId, req, target, redundancyOptions)
         return {
           target: rst.target || "",
           headers: rst.headers || "",

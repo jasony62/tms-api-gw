@@ -14,7 +14,7 @@ function HttpProxyRules(options) {
  * We also return the new endpoint string if a match is found.
  * @param  {Object} req Takes in a `req` object.
  */
-HttpProxyRules.prototype.match = function match(req) {
+HttpProxyRules.prototype.match = function match(req, redundancyOptions) {
   let rules = this.rules
   let target = this.default
   let path = req.url
@@ -65,6 +65,14 @@ HttpProxyRules.prototype.match = function match(req) {
   req.urlPrefix = urlPrefix
   req.originUrl = path
   req.targetUrl = target + req.url
+  
+  redundancyOptions.req = {
+    targetRule: targetRule,
+    urlPrefix: urlPrefix,
+    originUrl: path,
+    targetUrl: target + req.url
+  }
+
   return target
 }
 
