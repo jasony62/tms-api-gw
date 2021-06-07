@@ -10,13 +10,14 @@ module.exports = {
   port,
   name: "api-gw",
   proxy: {
-    rules: {"/a/b":"/c/d", "/a2/b2":{"target":"/c2/d2","auth":["httpService"],"trace":["mongodb","http"]}},
+    rules: {"/a/b":"/c/d", "/a2/b2":{"target":"/c2/d2","auth":["httpService"],"trace":["mongodb","http"],"transformRequest":["***"]}},
     default: `http://${host}:1234`
   },
   trace: {
     enable: true,
     mongodb: {
       type: "mongodb",
+      onlyError: false,
       user: false,
       password: false,
       host,
@@ -25,8 +26,10 @@ module.exports = {
     },
     http: {
       type: "http",
-      // events: ["recvReq", "sendReq", "response"],
-      url: "http://localhost:81"
+      onlyError: false,
+      // events: ["recvReq", "sendReq", "response", "checkpoint"],
+      url: "http://localhost:81",
+      before: '' // './*.js' or function(){}  数据发送前的前置操作
     },
     default: ["mongodb"]
   },
@@ -47,16 +50,21 @@ module.exports = {
   },
   auth: {
     enable: false,
-    onlyError: false,
     http: {
+      type: "http",
       query: ['access_token', 'access_token'],
       url: `http://${host}:3001/auth/client`
     },
     httpService: {
       type: "file",
-      path: `http://${host}:3002/auth/client`,
+      path: `./lib/auth/httpService`,
     },
     default: ["http"]
+  },
+  transformRequest: { // 支持在转发请求前修改请求
+    enable: false,
+    getToken: "./lib/transformRequest/*.js", // ‘./*.js’ or function() {}
+    default: []
   },
   pushMessage: { // sendMessage
     enable: true,

@@ -1,4 +1,7 @@
 const axios = require('axios')
+const fs = require("fs")
+const PATH = require("path")
+const _ = require("lodash")
 
 class HttpAuth {
   constructor(config, authInstanceMap) {
@@ -23,7 +26,7 @@ class HttpAuth {
    * @param {*} res 
    * @returns 
    */
-  async check(req, res) {
+  async check(req, res, redundancyOptions) {
     //
     const targetAuths = this.getTargetAuth(req.targetRule)
     const { query } = require('url').parse(req.url, true)
@@ -36,15 +39,15 @@ class HttpAuth {
         if (fs.existsSync(authPath)) {
           const authFunc = require(authPath)
           if (typeof authFunc === "function") {
-            const rst = await authFunc(req, res)
+            const rst = await authFunc(req, res, redundancyOptions)
             if (rst.code === 0) {
               return Promise.resolve(rst.clientId)
             } else {
               if (errMsg !== "") errMsg += " 或 "
               errMsg += rst.msg
             }
-          } else return Promise.reject({msg: "指定的鉴权方式不是一个方法"})
-        } else return Promise.reject({msg: "指定的鉴权方法不存在"})
+          } else return Promise.reject({msg: "指定的鉴权方式不是一个函数"})
+        } else return Promise.reject({msg: "指定的鉴权方式不存在"})
       } else if (tarAth.type === "http") {
         let param = [tarAth.query[0], query[tarAth.query[1]]]
         param = param.join('=')
@@ -53,9 +56,14 @@ class HttpAuth {
           if (errMsg !== "") errMsg += " 或 "
           errMsg += rst.data.msg
         } else {
-          const client = rst.data.result
-          const clientId = client[tarAth.clientIdField]
-          return Promise.resolve(clientId)
+          const clientId = _.get(rst.data.result, tarAth.clientIdField, null)
+          if (!clientId) {
+            if (errMsg !== "") errMsg += " 或 "
+            errMsg += `获取${tarAth.clientIdField}失败`
+          } else {
+            redundancyOptions.client = rst.data.result
+            return Promise.resolve(clientId)
+          }
         }
       }
     }
