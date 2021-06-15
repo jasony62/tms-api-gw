@@ -53,8 +53,9 @@ class Gateway {
       if (this.ctx.auth) {
         try {
           clientId = await this.ctx.auth.check(req, res, redundancyOptions)
+          this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "auth")
         } catch (err) {
-          logger.error("auth", req.url, err)
+          logger.error("auth", req.headers['x-request-id'], req.url, err, )
           this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "auth", err)
           res.writeHead(401, { 'Content-Type': 'text/plain; charset=utf-8' })
           return res.end(err.msg)
@@ -79,7 +80,7 @@ class Gateway {
           const rst = await this.ctx.transformRequest.check(clientId, req, target, redundancyOptions)
           if (rst.target) target = rst.target
         } catch (err) {
-          logger.error("transformRequest", req.url, err)
+          logger.error("transformRequest", req.headers['x-request-id'], req.url, err)
           res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' })
           return res.end(err.msg)
         }

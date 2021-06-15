@@ -77,7 +77,7 @@ async function _eventTrace(req, ctx, TraceObj, event, datas, options = {}) {
           targetTc.mongoose.create(
             datas,
             err => {
-              if (err) logger.warn('TraceLog.create', err)
+              if (err) logger.warn('TraceLog.create', req.headers['x-request-id'], err)
             }
           )
         } else {
@@ -112,8 +112,8 @@ class Trace {
    * @param {*} req
    */
   async logRecvReq(req, res, ctx) {
-    logger.debug('logRecvReq enter')
-    const { method, headers, originUrl: url, targetRule } = req
+    logger.debug(`logRecvReq enter ${req.headers['x-request-id']} ${req.originUrl}`)
+    const { method, headers, originUrl: url } = req
     const requestId = headers['x-request-id']
     const recvUrl = _.pick(require('url').parse(url, true), [
       'protocol',
@@ -123,14 +123,14 @@ class Trace {
       'query'
     ])
     
-    const datas = { requestId, recvUrl, method, recvHeaders: headers }
+    const datas = { requestId, recvUrl, method, recvHeaders: headers, requestAt: new Date() * 1 }
     _eventTrace(req, ctx, this, "recvReq", datas)
 
     return 
   }
 
   async logSendReq(proxyReq, req, res, options, ctx) {
-    logger.debug('logSendReq enter ' + req.originUrl)
+    logger.debug(`logSendReq enter ${req.headers['x-request-id']} ${req.originUrl}`)
     const sendUrl = _.pick(options.target, [
       'protocol',
       'hostname',
@@ -142,15 +142,17 @@ class Trace {
 
     let recvBody
     if ('POST' == req.method) recvBody = await parseBody(req)
-    const datas = { clientId, sendUrl, sendHeaders: req.headers, recvBody }
+    const current = new Date() * 1
+    const send_elapseMs = current - req.headers['x-request-at']
+    const datas = { clientId, sendUrl, sendHeaders: req.headers, recvBody, send_elapseMs, reqSendAt: current }
 
     _eventTrace(req, ctx, this, "sendReq", datas)
-    
+
     return 
   }
 
   async logResponse(proxyRes, req, res, ctx) {
-    logger.debug('logResponse enter ' + req.originUrl)
+    logger.debug(`logResponse enter ${req.headers['x-request-id']} ${req.originUrl}`)
 
     let body = []
     proxyRes.on('data', chunk => {
@@ -158,29 +160,39 @@ class Trace {
     })
     proxyRes.on('end', async () => {
       body = Buffer.concat(body).toString()
+      const current = new Date() * 1
       const requestAt = req.headers['x-request-at']
-      const elapseMs = new Date() * 1 - requestAt
+      const res_elapseMs = current - requestAt
       const { statusCode, statusMessage, headers } = proxyRes
       const datas = {
         statusCode,
         statusMessage,
         responseHeaders: headers,
         responseBody: body,
-        elapseMs
+        res_elapseMs,
+        responseAt: current
       }
       _eventTrace(req, ctx, this, "response", datas, { proxyRes: { statusCode, statusMessage, headers } })
     })
   }
 
   async logCheckpointReq(req, res, ctx, type, error) {
+    let current = new Date() * 1
+
     if (!type) 
       return 
 
-    let checkpointStatus = {}
-    checkpointStatus[type] = error.msg
+    let checkpointStatus = {}, checkpointStatusMsg = "passe"
+
+    if (error) checkpointStatusMsg = error.msg
+    checkpointStatus[type] = checkpointStatusMsg
 
     const clientId = req.headers['x-request-client']
-    const datas = { checkpointStatus, clientId }
+    let datas = { checkpointStatus, clientId }
+    if (type === "auth") {
+      datas.auth_elapseMs = current - req.headers['x-request-at']
+    }
+
     _eventTrace(req, ctx, this, "checkpoint", datas)
 
     return 
@@ -195,7 +207,7 @@ Trace.createModel = function(mongoose) {
     new Schema(
       {
         requestId: String,
-        requestAt: { type: Date, default: Date.now },
+        requestAt: { type: Date },
         clientId: String,
         recvUrl: {
           protocol: String,
@@ -207,6 +219,7 @@ Trace.createModel = function(mongoose) {
         method: String,
         recvHeaders: Object,
         recvBody: String,
+        reqSendAt: { type: Date },
         sendUrl: {
           protocol: String,
           hostname: String,
@@ -217,9 +230,12 @@ Trace.createModel = function(mongoose) {
         sendHeaders: Object,
         statusCode: { type: Number, default: 0 },
         statusMessage: { type: String, default: '' },
+        responseAt: { type: Date },
         responseHeaders: { type: Object, default: {} },
         responseBody: { type: String, default: '' },
-        elapseMs: { type: Number, default: 0 },
+        res_elapseMs: { type: Number, default: 0 },
+        auth_elapseMs: { type: Number, default: 0 },
+        send_elapseMs: { type: Number, default: 0 },
         checkpointStatus: {
           auth: String,
           quota: String
