@@ -123,7 +123,7 @@ class Trace {
       'query'
     ])
     
-    const datas = { requestId, recvUrl, method, recvHeaders: headers, requestAt: new Date() * 1 }
+    const datas = { requestId, recvUrl, method, recvHeaders: headers, requestAt: req.headers['x-request-at'] }
     _eventTrace(req, ctx, this, "recvReq", datas)
 
     return 
@@ -145,6 +145,7 @@ class Trace {
     const current = new Date() * 1
     const send_elapseMs = current - req.headers['x-request-at']
     const datas = { clientId, sendUrl, sendHeaders: req.headers, recvBody, send_elapseMs, reqSendAt: current }
+    logger.debug("send", req.headers['x-request-id'], new Date() * 1 - req.headers['x-request-at'])
 
     _eventTrace(req, ctx, this, "sendReq", datas)
 
@@ -153,6 +154,7 @@ class Trace {
 
   async logResponse(proxyRes, req, res, ctx) {
     logger.debug(`logResponse enter ${req.headers['x-request-id']} ${req.originUrl}`)
+    logger.debug("res", req.headers['x-request-id'], new Date() * 1 - req.headers['x-request-at'])
 
     let body = []
     proxyRes.on('data', chunk => {
@@ -172,6 +174,7 @@ class Trace {
         res_elapseMs,
         responseAt: current
       }
+      logger.debug("res2", req.headers['x-request-id'], new Date() * 1 - req.headers['x-request-at'])
       _eventTrace(req, ctx, this, "response", datas, { proxyRes: { statusCode, statusMessage, headers } })
     })
   }
@@ -191,6 +194,9 @@ class Trace {
     let datas = { checkpointStatus, clientId }
     if (type === "auth") {
       datas.auth_elapseMs = current - req.headers['x-request-at']
+    } else if (type === "error") {
+      datas.reqErrorAt = current
+      datas.err_elapseMs = current - req.headers['x-request-at']
     }
 
     _eventTrace(req, ctx, this, "checkpoint", datas)
@@ -238,8 +244,11 @@ Trace.createModel = function(mongoose) {
         send_elapseMs: { type: Number, default: 0 },
         checkpointStatus: {
           auth: String,
-          quota: String
-        }
+          quota: String,
+          error: String
+        },
+        reqErrorAt: { type: Date },
+        err_elapseMs: { type: Number, default: 0 },
       },
       { collection: 'trace_log' }
     )

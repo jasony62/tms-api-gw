@@ -19,6 +19,8 @@ class Gateway {
     // 异常事件不处理
     proxy.on('error', (err, req, res) => {
       logger.error("logError " + req.originUrl, err)
+      logger.debug("error", req.headers['x-request-id'], new Date() * 1 - req.headers['x-request-at'])
+      this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "error", err)
       res.end()
     })
     // 准备发送请求
@@ -32,9 +34,11 @@ class Gateway {
     // 启动http服务
     const app = http.createServer(async (req, res) => {
       // 设置唯一id，便于跟踪
-      req.headers['x-request-id'] = uuid()
+      if (!req.headers['x-request-id']) {
+        req.headers['x-request-id'] = uuid()
+      }
       req.headers['x-request-at'] = new Date() * 1
-      
+      logger.debug("recv", req.headers['x-request-id'], req.headers['x-request-at'])
       // 冗余属性存放
       let redundancyOptions = {}
       // 匹配路由
@@ -45,17 +49,21 @@ class Gateway {
         return res.end('Not found')
       }
 
+      logger.debug("rules", req.headers['x-request-id'], new Date() * 1 - req.headers['x-request-at'])
       // 记录收到请求的原始信息
       this.ctx.emitter.emit('recvReq', req, res, this.ctx)
 
+      logger.debug("rules2", req.headers['x-request-id'], new Date() * 1 - req.headers['x-request-at'])
       // 身份认证
       let clientId
       if (this.ctx.auth) {
         try {
           clientId = await this.ctx.auth.check(req, res, redundancyOptions)
           this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "auth")
+          logger.debug("auth", req.headers['x-request-id'], new Date() * 1 - req.headers['x-request-at'])
         } catch (err) {
-          logger.error("auth", req.headers['x-request-id'], req.url, err, )
+          logger.debug("auth", req.headers['x-request-id'], new Date() * 1 - req.headers['x-request-at'])
+          logger.error("auth", req.headers['x-request-id'], req.url, err)
           this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "auth", err)
           res.writeHead(401, { 'Content-Type': 'text/plain; charset=utf-8' })
           return res.end(err.msg)
@@ -73,6 +81,7 @@ class Gateway {
           return res.end(err.msg)
         }
       }
+      logger.debug("quota", req.headers['x-request-id'], new Date() * 1 - req.headers['x-request-at'])
 
       // 转换请求
       if (this.ctx.transformRequest) {
@@ -85,6 +94,7 @@ class Gateway {
           return res.end(err.msg)
         }
       }
+      logger.debug("transform", req.headers['x-request-id'], new Date() * 1 - req.headers['x-request-at'])
       // 执行反向代理
       proxy.web(req, res, { target })
 
