@@ -77,7 +77,7 @@ async function _eventTrace(req, ctx, TraceObj, event, datas, options = {}) {
           targetTc.mongoose.create(
             datas,
             err => {
-              if (err) logger.warn('TraceLog.create', req.headers['x-request-id'], err)
+              if (err) logger.error(`TraceLog.create || ${req.headers['x-request-id']} || ${req.originUrl} || ${new Date() * 1 - req.headers['x-request-at']}`, err)
             }
           )
         } else {
@@ -112,7 +112,6 @@ class Trace {
    * @param {*} req
    */
   async logRecvReq(req, res, ctx) {
-    logger.debug(`logRecvReq enter ${req.headers['x-request-id']} ${req.originUrl}`)
     const { method, headers, originUrl: url } = req
     const requestId = headers['x-request-id']
     const recvUrl = _.pick(require('url').parse(url, true), [
@@ -126,11 +125,11 @@ class Trace {
     const datas = { requestId, recvUrl, method, recvHeaders: headers, requestAt: req.headers['x-request-at'] }
     _eventTrace(req, ctx, this, "recvReq", datas)
 
+    logger.debug(`logRecvReq enter || ${req.headers['x-request-id']} || ${req.originUrl} || ${new Date() * 1 - req.headers['x-request-at']}`)
     return 
   }
 
   async logSendReq(proxyReq, req, res, options, ctx) {
-    logger.debug(`logSendReq enter ${req.headers['x-request-id']} ${req.originUrl}`)
     const sendUrl = _.pick(options.target, [
       'protocol',
       'hostname',
@@ -145,17 +144,14 @@ class Trace {
     const current = new Date() * 1
     const send_elapseMs = current - req.headers['x-request-at']
     const datas = { clientId, sendUrl, sendHeaders: req.headers, recvBody, send_elapseMs, reqSendAt: current }
-    logger.debug("send", req.headers['x-request-id'], new Date() * 1 - req.headers['x-request-at'])
 
     _eventTrace(req, ctx, this, "sendReq", datas)
 
+    logger.debug(`logSendReq enter || ${req.headers['x-request-id']} || ${req.originUrl} || ${new Date() * 1 - req.headers['x-request-at']}`)
     return 
   }
 
   async logResponse(proxyRes, req, res, ctx) {
-    logger.debug(`logResponse enter ${req.headers['x-request-id']} ${req.originUrl}`)
-    logger.debug("res", req.headers['x-request-id'], new Date() * 1 - req.headers['x-request-at'])
-
     let body = []
     proxyRes.on('data', chunk => {
       body.push(chunk)
@@ -174,12 +170,12 @@ class Trace {
         res_elapseMs,
         responseAt: current
       }
-      logger.debug("res2", req.headers['x-request-id'], new Date() * 1 - req.headers['x-request-at'])
       _eventTrace(req, ctx, this, "response", datas, { proxyRes: { statusCode, statusMessage, headers } })
+      logger.debug(`logResponse enter || ${req.headers['x-request-id']} || ${req.originUrl} || ${new Date() * 1 - req.headers['x-request-at']}`)
     })
   }
 
-  async logCheckpointReq(req, res, ctx, type, error) {
+  async logCheckpointReq(req, res, ctx, type, error = "") {
     let current = new Date() * 1
 
     if (!type) 
@@ -197,10 +193,13 @@ class Trace {
     } else if (type === "error") {
       datas.reqErrorAt = current
       datas.err_elapseMs = current - req.headers['x-request-at']
+    } else if (type === "transformRequest") {
+      datas.transformRequest_elapseMs = current - req.headers['x-request-at']
     }
 
     _eventTrace(req, ctx, this, "checkpoint", datas)
 
+    logger.debug(`logCheckpointReq ${type} || ${req.headers['x-request-id']} || ${req.originUrl} || ${current - req.headers['x-request-at']}`, error)
     return 
   }
 }
@@ -239,9 +238,10 @@ Trace.createModel = function(mongoose) {
         responseAt: { type: Date },
         responseHeaders: { type: Object, default: {} },
         responseBody: { type: String, default: '' },
-        res_elapseMs: { type: Number, default: 0 },
         auth_elapseMs: { type: Number, default: 0 },
+        transformRequest_elapseMs: { type: Number, default: 0 },
         send_elapseMs: { type: Number, default: 0 },
+        res_elapseMs: { type: Number, default: 0 },
         checkpointStatus: {
           auth: String,
           quota: String,

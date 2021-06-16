@@ -76,13 +76,13 @@ Context.ins = (function() {
       ctx.trace = trace
     }
     /* quota */
-    if (config.quota && config.quota.mongodb) {
+    if (config.quota) {
       const MongoContext = require('./mongo')
       const mongo = await MongoContext.ins(config.quota.mongodb)
       const quota = require('./quota')(
         ctx.emitter,
         mongo.mongoose,
-        config.quota.rules
+        config.quota
       )
       ctx.quota = quota
     }

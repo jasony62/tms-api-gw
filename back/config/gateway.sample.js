@@ -40,13 +40,15 @@ module.exports = {
       port: 27017,
       database: 'tms-api-gw'
     },
-    rules: {
+    rule1: {
       rateLimit: {
         minute: {
-          limit: 0
+          limit: process.env.TMS_QUOTA_RATELIMIT_MINUTE || 0
         }
       }
-    }
+    },
+    rule2: "./lib/quota/test.js",
+    default: []
   },
   auth: {
     enable: false,

@@ -1,12 +1,15 @@
 const log4js = require('@log4js-node/log4js-api')
 const logger = log4js.getLogger('tms-api-gw')
 const _ = require("lodash")
+const fs = require("fs")
+const PATH = require("path")
 
 class Quota {
-  constructor(ModelDay, ModelArchive, rules) {
+  constructor(ModelDay, ModelArchive, quotaRulesMap, defaultQuota) {
     this.modelDay = ModelDay
     this.modelArchive = ModelArchive
-    this.rules = rules
+    this.quotaRulesMap = quotaRulesMap
+    this.defaultQuota = defaultQuota
   }
   /**
    *
@@ -16,8 +19,21 @@ class Quota {
     const clientId = req.headers['x-request-client']
     const api = require('url').parse(req.originUrl).pathname
     const requestAt = req.headers['x-request-at']
+    const targetRule = req.targetRule
 
-    return { clientId, api, requestAt }
+    return { clientId, api, requestAt, targetRule }
+  }
+  /**
+   *  
+   */
+  _getReqQuotaRule(targetRule) {
+    let getReqTargetRuless
+    if (targetRule.quota && Array.isArray(targetRule.quota)) {
+      getReqTargetRuless = targetRule.quota
+    } else {
+      getReqTargetRuless = this.defaultQuota
+    }
+    return getReqTargetRuless
   }
   /**
    * 记录当天数据
@@ -91,9 +107,29 @@ class Quota {
    * @param {*} req
    */
   async check(req) {
-    const { clientId, api, requestAt } = this.getReqInfo(req)
-    if (this.rules.rateLimit) {
-      const rateLimit = this.rules.rateLimit
+    const { clientId, api, requestAt, targetRule } = this.getReqInfo(req)
+    const reqQuotaRules = this._getReqQuotaRule(targetRule)
+
+    for (const reqQuoRul of reqQuotaRules) {
+      const quoRul = this.quotaRulesMap.get(reqQuoRul)
+      let rule
+      if (Object.prototype.toString.call(quoRul) === "[object Object]") {
+        rule = Object.assign({}, quoRul)
+      } else if (typeof quoRul === "string") {
+        const quoPath = PATH.resolve(quoRul)
+        if (fs.existsSync(quoPath)) {
+          const r = require(quoPath)(req)
+          rule = Object.assign({}, r)
+        }
+      }
+      if (Object.prototype.toString.call(rule) !== "[object Object]") {
+        return Promise.reject({msg: `解析错误：控制规则不是一个object`})
+      }
+
+      let minuLimit = _.get(rule, "rateLimit.minute.limit", null)
+      minuLimit = +minuLimit
+      if (minuLimit < 1) continue
+
       const doc = await this.modelDay.findOne({ clientId, api })
       if (doc) {
         let oLatestAt = new Date(doc.latestAt)
@@ -101,17 +137,16 @@ class Quota {
         oLatestAt.setSeconds(0, 0)
         oRequestAt.setSeconds(0, 0)
         let diff = oRequestAt - oLatestAt
-        const minuLimit = _.get(rateLimit, "minute.limit", null)
-        if (diff < 60000 && !isNaN(minuLimit) && parseInt(minuLimit) > 0) {
-          if (parseInt(minuLimit) <= doc.minute) {
-            logger.warn("quota check minuLimit", api)
-            return Promise.reject({msg: `本接口执行流量控制，限制次数为[${minuLimit}]，周期为[分]，当前次数[${doc.minute}]`})
+        if (diff < 60000) {
+          if (minuLimit <= doc.minute) {
+            logger.warn(`quota check minuLimit || ${req.headers['x-request-id']} || ${req.originUrl} || ${new Date() * 1 - req.headers['x-request-at']}`, `api 执行流量控制，限制次数为[${minuLimit}]，周期为[分]，当前次数[${doc.minute}]`)
+            return Promise.reject({msg: `api 执行流量控制，限制次数为[${minuLimit}]，周期为[分]，当前次数[${doc.minute + 1}]`})
           }
         }
       }
     }
 
-    return true
+    return Promise.resolve(true)
   }
 }
 
@@ -153,13 +188,19 @@ Quota.createModelArchive = function(mongoose) {
 
 module.exports = (function() {
   let _instance
-  return function(emitter, mongoose, rules) {
+  return function(emitter, mongoose, config) {
     if (_instance) return _instance
 
+    const { default: defaultQuota, ...rules } = config
     let ModelDay = Quota.createModelDay(mongoose)
     let ModelArchive = Quota.createModelArchive(mongoose)
 
-    _instance = new Quota(ModelDay, ModelArchive, rules)
+    let quotaRulesMap = new Map()
+    for (const rl in rules) {
+      quotaRulesMap.set(rl, rules[rl])
+    }
+
+    _instance = new Quota(ModelDay, ModelArchive, quotaRulesMap, defaultQuota)
 
     emitter.on('proxyRes', _instance.logDay.bind(_instance))
     emitter.on('proxyRes', _instance.logArchive.bind(_instance))
