@@ -3,6 +3,7 @@ const logger = log4js.getLogger('tms-api-gw_idx')
 const ProxyRules = require('./proxy/rule')
 const uuid = require('uuid')
 const Context = require('./context')
+const quota = require('./quota')
 
 class Gateway {
   constructor(ctx) {
@@ -34,8 +35,10 @@ class Gateway {
       req.headers['x-request-id'] = uuid()
       req.headers['x-request-at'] = new Date() * 1
       
+      // 冗余属性存放
+      let redundancyOptions = {}
       // 匹配路由
-      const target = this.rules.match(req)
+      let target = this.rules.match(req, redundancyOptions)
       if (!target) {
         // 没有匹配的目标直接返回
         res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })
@@ -49,9 +52,10 @@ class Gateway {
       let clientId
       if (this.ctx.auth) {
         try {
-          clientId = await this.ctx.auth.check(req, res)
+          clientId = await this.ctx.auth.check(req, res, redundancyOptions)
         } catch (err) {
           logger.error("auth", req.url, err)
+          this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "auth", err)
           res.writeHead(401, { 'Content-Type': 'text/plain; charset=utf-8' })
           return res.end(err.msg)
         }
@@ -63,11 +67,23 @@ class Gateway {
         try {
           await this.ctx.quota.check(req)
         } catch (err) {
+          this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "quota", err)
           res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' })
           return res.end(err.msg)
         }
       }
 
+      // 转换请求
+      if (this.ctx.transformRequest) {
+        try {
+          const rst = await this.ctx.transformRequest.check(clientId, req, target, redundancyOptions)
+          if (rst.target) target = rst.target
+        } catch (err) {
+          logger.error("transformRequest", req.url, err)
+          res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' })
+          return res.end(err.msg)
+        }
+      }
       // 执行反向代理
       proxy.web(req, res, { target })
 

@@ -14,7 +14,7 @@ class Quota {
    */
   getReqInfo(req) {
     const clientId = req.headers['x-request-client']
-    const api = require('url').parse(req.targetUrl).pathname
+    const api = require('url').parse(req.originUrl).pathname
     const requestAt = req.headers['x-request-at']
 
     return { clientId, api, requestAt }

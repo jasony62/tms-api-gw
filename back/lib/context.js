@@ -30,7 +30,7 @@ Config.ins = (function() {
       return Promise.reject(new ConfigError(msg))
     }
 
-    const { port, proxy, trace, quota, auth, pushMessage } = require(filename)
+    const { port, proxy, trace, quota, auth, transformRequest, pushMessage } = require(filename)
     _ins = new Config(port, proxy)
     if (trace && (trace.enable === undefined || trace.enable === true))
       _ins.trace = trace
@@ -38,12 +38,15 @@ Config.ins = (function() {
       _ins.quota = quota
     if (auth && (auth.enable === undefined || auth.enable === true))
       _ins.auth = auth
+    if (transformRequest && (transformRequest.enable === undefined || transformRequest.enable === true))
+      _ins.transformRequest = transformRequest
     if (pushMessage && (pushMessage.enable === undefined || pushMessage.enable === true))
       _ins.pushMessage = pushMessage
 
     logger.info('日志服务：', _ins.trace ? '打开' : '否')
     logger.info('配额服务：', _ins.quota ? '打开' : '否')
     logger.info('认证服务：', _ins.auth ? '打开' : '否')
+    logger.info('转换请求服务：', _ins.transformRequest ? '打开' : '否')
     logger.info('消息推送服务：', _ins.pushMessage ? '打开' : '否')
 
     return _ins
@@ -87,6 +90,11 @@ Context.ins = (function() {
     if (config.auth) {
       const auth = require('./auth')(config.auth)
       ctx.auth = auth
+    }
+    /* auth */
+    if (config.transformRequest) {
+      const transformRequest = require('./transformRequest')(config.transformRequest)
+      ctx.transformRequest = transformRequest
     }
     /* pushMessage */
     if (config.pushMessage && config.pushMessage.redis) {
