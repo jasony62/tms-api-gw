@@ -22,7 +22,8 @@ module.exports = {
       password: false,
       host,
       port: 27017,
-      database: 'tms-api-gw'
+      database: 'tms-api-gw',
+      // maxPoolSize: 10 // default 5
     },
     http: {
       type: "http",

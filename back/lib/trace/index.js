@@ -125,7 +125,7 @@ class Trace {
     const datas = { requestId, recvUrl, method, recvHeaders: headers, requestAt: req.headers['x-request-at'] }
     _eventTrace(req, ctx, this, "recvReq", datas)
 
-    logger.debug(`logRecvReq enter || ${req.headers['x-request-id']} || ${req.originUrl} || ${new Date() * 1 - req.headers['x-request-at']}`)
+    logger.debug(`logRecvReq || ${req.headers['x-request-id']} || ${req.originUrl} || ${new Date() * 1 - req.headers['x-request-at']}`)
     return 
   }
 
@@ -147,7 +147,7 @@ class Trace {
 
     _eventTrace(req, ctx, this, "sendReq", datas)
 
-    logger.debug(`logSendReq enter || ${req.headers['x-request-id']} || ${req.originUrl} || ${new Date() * 1 - req.headers['x-request-at']}`)
+    logger.debug(`logSendReq || ${req.headers['x-request-id']} || ${req.originUrl} || ${new Date() * 1 - req.headers['x-request-at']}`)
     return 
   }
 
@@ -171,7 +171,7 @@ class Trace {
         responseAt: current
       }
       _eventTrace(req, ctx, this, "response", datas, { proxyRes: { statusCode, statusMessage, headers } })
-      logger.debug(`logResponse enter || ${req.headers['x-request-id']} || ${req.originUrl} || ${new Date() * 1 - req.headers['x-request-at']}`)
+      logger.debug(`logResponse || ${req.headers['x-request-id']} || ${req.originUrl} || ${new Date() * 1 - req.headers['x-request-at']}`)
     })
   }
 
@@ -195,6 +195,8 @@ class Trace {
       datas.err_elapseMs = current - req.headers['x-request-at']
     } else if (type === "transformRequest") {
       datas.transformRequest_elapseMs = current - req.headers['x-request-at']
+    } else if (type === "quota") {
+      datas.quota_elapseMs = current - req.headers['x-request-at']
     }
 
     _eventTrace(req, ctx, this, "checkpoint", datas)
@@ -239,6 +241,7 @@ Trace.createModel = function(mongoose) {
         responseHeaders: { type: Object, default: {} },
         responseBody: { type: String, default: '' },
         auth_elapseMs: { type: Number, default: 0 },
+        quota_elapseMs: { type: Number, default: 0 },
         transformRequest_elapseMs: { type: Number, default: 0 },
         send_elapseMs: { type: Number, default: 0 },
         res_elapseMs: { type: Number, default: 0 },
