@@ -18,7 +18,8 @@ module.exports = {
     enable: process.env.TMS_TRACEFORNREQ_ENABLE === "false" ? false : true,
     getToken: "./lib/transformRequest/getToken.js",
     callticket_down: "./lib/transformRequest/callticket_down.js",
-    default: []
+    binding: "./lib/transformRequest/binding.js",
+    default: process.env.TMS_TRANSFORM_DEFAULT ? JSON.parse(process.env.TMS_TRANSFORM_DEFAULT) : []
   },
   trace: { // 日志
     enable: process.env.TMS_TRACE_ENABLE === "false" ? false : true,

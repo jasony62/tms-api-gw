@@ -109,7 +109,6 @@ class Quota {
   async check(req) {
     const { clientId, api, requestAt, targetRule } = this.getReqInfo(req)
     const reqQuotaRules = this._getReqQuotaRule(targetRule)
-
     for (const reqQuoRul of reqQuotaRules) {
       const quoRul = this.quotaRulesMap.get(reqQuoRul)
       let rule
@@ -140,7 +139,7 @@ class Quota {
         if (diff < 60000) {
           if (minuLimit <= doc.minute) {
             logger.warn(`quota check minuLimit || ${req.headers['x-request-id']} || ${req.originUrl} || ${new Date() * 1 - req.headers['x-request-at']}`, `api 执行流量控制，限制次数为[${minuLimit}]，周期为[分]，当前次数[${doc.minute}]`)
-            return Promise.reject({msg: `api 执行流量控制，限制次数为[${minuLimit}]，周期为[分]，当前次数[${doc.minute + 1}]`})
+            return Promise.reject({msg: `api 执行流量控制，限制次数为[${minuLimit}]，周期为[分]，当前次数 大于 ${minuLimit}`})
           }
         }
       }

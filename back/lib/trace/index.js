@@ -1,5 +1,5 @@
 const log4js = require('@log4js-node/log4js-api')
-const logger = log4js.getLogger('tms-api-gw')
+const logger = log4js.getLogger('tms-api-gw-trace')
 const _ = require('lodash')
 const PATH = require("path")
 const fs = require("fs")
@@ -201,7 +201,10 @@ class Trace {
 
     _eventTrace(req, ctx, this, "checkpoint", datas)
 
-    logger.debug(`logCheckpointReq ${type} || ${req.headers['x-request-id']} || ${req.originUrl} || ${current - req.headers['x-request-at']}`, error)
+    let msg = `logCheckpointReq ${type} || ${req.headers['x-request-id']} || ${req.originUrl} || ${current - req.headers['x-request-at']}`
+    if ( error ) logger.error(msg, error)
+    else logger.debug(msg)
+
     return 
   }
 }
