@@ -1,10 +1,12 @@
-let host, port
+let host, port, ctrlPort
 if (process.env.TMS_API_GW_ENV === 'docker') {
   host = 'docker.for.mac.host.internal'
   port = 3000
+  ctrlPort = 3001
 } else {
   host = process.env.TMS_APP_HOST || 'localhost'
   port = parseInt(process.env.TMS_APP_PORT) || 3000
+  ctrlPort = parseInt(process.env.TMS_APP_CTRLPORT) || 3001
 }
 
 module.exports = {
@@ -12,7 +14,7 @@ module.exports = {
   name: process.env.TMS_APP_NAME || "",
   proxy: {
     rules: process.env.TMS_PROXY_RULES ? JSON.parse(process.env.TMS_PROXY_RULES) : {},
-    default: `http://localhost:1234`
+    default: ``
   },
   transformRequest: {
     enable: process.env.TMS_TRACEFORNREQ_ENABLE === "false" ? false : true,
@@ -109,4 +111,24 @@ module.exports = {
       channel: process.env.TMS_SENDMESSAGE_REDIS_CHANNEL || 'tms-api-gw-pushMessage',
     }
   },
+  controller: {
+    enable: process.env.TMS_CONTROLLER_ENABLE === "true" ? true : false,
+    port: ctrlPort,
+    mongodb: {
+      host: process.env.TMS_CTRL_MONGODB_HOST || host,
+      port: parseInt(process.env.TMS_CTRL_MONGODB_PORT) || 27017,
+      database: process.env.TMS_CTRL_MONGODB_DATABASE || 'tms-api-gw-jh',
+      user: process.env.TMS_CTRL_MONGODB_USER || false,
+      password: process.env.TMS_CTRL_MONGODB_PASSWORD || false,
+      maxPoolSize: parseInt(process.env.TMS_CTRL_MONGODB_MAXPOOLSIZE) || 100,
+    },
+    router: {
+      controllers: {
+        prefix: process.env.TMS_APP_ROUTER_CONTROLLER || "" // 接口调用url的前缀
+      },
+    },
+    shorturl: {
+      prefix: process.env.TMS_APP_SHORTURL_PREFIX || "/i"
+    }
+  }
 }

@@ -3,16 +3,18 @@ const logger = log4js.getLogger('tms-api-gw_idx')
 const ProxyRules = require('./proxy/rule')
 const uuid = require('uuid')
 const Context = require('./context')
-const quota = require('./quota')
+const http = require('http')
 
 class Gateway {
   constructor(ctx) {
     this.ctx = ctx
     this.port = ctx.config.port
-    this.rules = new ProxyRules(ctx.config.proxy)
+    this.rules = new ProxyRules(ctx)
   }
+  /**
+   * gateway
+   */
   createGateway() {
-    const http = require('http')
     const httpProxy = require('http-proxy')
     //创建代理服务器监听捕获异常事件
     const proxy = httpProxy.createProxyServer()
@@ -39,7 +41,7 @@ class Gateway {
       // 冗余属性存放
       let redundancyOptions = {}
       // 匹配路由
-      let target = this.rules.match(req, redundancyOptions)
+      let target = await this.rules.match(req, redundancyOptions)
       if (!target) {
         // 没有匹配的目标直接返回
         res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })
@@ -87,6 +89,7 @@ class Gateway {
           return res.end(err.msg)
         }
       }
+
       // 执行反向代理
       proxy.web(req, res, { target })
 
@@ -96,14 +99,39 @@ class Gateway {
       logger.info('Tms Api Gateway is runing at %d', this.port)
     })
   }
+  /**
+   * controllers
+   */
+  createController() {
+    if (!this.ctx.controller) {
+      return 
+    }
+
+    const app = http.createServer(async (req, res) => {
+      const getUrl = new URL(req.url, "http://" + req.headers.host)
+      req.path = getUrl.pathname
+      await this.ctx.controller.fnCtrl(req, res)
+      if (!res.statusCode) res.statusCode = 200
+      if (!res.hasHeader('Content-Type')) res.setHeader("Content-Type", "application/json;charset=utf-8")
+      if (!res.body) res.body = ""
+      if (typeof res.body !== "string") res.body = JSON.stringify(res.body)
+      res.end(res.body)
+      return
+    })
+
+    let ctrlPort = this.ctx.controller.config.port
+    app.listen(ctrlPort, () => {
+      logger.info('Tms Api Gateway-controller is runing at %d', ctrlPort)
+    })
+  }
 }
 Gateway.startup = async function() {
   try {
     const ctx = await Context.ins()
     const gateway = new Gateway(ctx)
     gateway.createGateway()
+    gateway.createController()
   } catch (e) {
-    const http = require('http')
     const app = http.createServer(async (req, res) => {
       logger.error("createGateway", e)
       res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' })
