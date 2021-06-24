@@ -128,7 +128,8 @@ module.exports = {
       },
     },
     shorturl: {
-      prefix: process.env.TMS_APP_SHORTURL_PREFIX || "/i"
+      host: process.env.TMS_APP_SHORTURL_HOST || "http://localhost",
+      prefix: process.env.TMS_APP_SHORTURL_PREFIX || "/s"
     }
   }
 }

@@ -7,12 +7,15 @@ const API_FIELD_REQUEST = Symbol('request')
 const API_FIELD_RESPONSE = Symbol('response')
 //
 const API_FIELD_MONGOOSE = Symbol('mongoose')
+//
+const API_FIELD_APPCONFIG = Symbol('appConfig')
 
 class Ctrl {
-  constructor(request, response, mongoose) {
+  constructor(request, response, mongoose, appConfig) {
     this[API_FIELD_REQUEST] = request
     this[API_FIELD_RESPONSE] = response
     this[API_FIELD_MONGOOSE] = mongoose
+    this[API_FIELD_APPCONFIG] = appConfig
   }
 
   get request() {
@@ -24,13 +27,16 @@ class Ctrl {
   get mongoose() {
     return this[API_FIELD_MONGOOSE]
   }
+  get appConfig() {
+    return this[API_FIELD_APPCONFIG]
+  }
   /**
    * 加载指定的model包，传递数据库实例
    *
    * @param {string} name 模型的名称（从models目录下开始）
    */
   model(name) {
-    const path = `${process.cwd()}/models/${name}`
+    const path = `${process.cwd()}/lib/models/${name}`
     const Model = require(path)
     return (new Model(this.mongoose))
   }

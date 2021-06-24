@@ -94,9 +94,9 @@ class Wrapper {
     /* 数据库连接 */
     let mongooseWrapper
     try {
-      const { MongooseContext } = this.context
-      if (MongooseContext) {
-        mongooseWrapper = MongooseContext
+      const { MongooseContextCtrl } = this.context
+      if (MongooseContextCtrl) {
+        mongooseWrapper = MongooseContextCtrl
       }
       /**
        * 创建控制器实例
@@ -104,7 +104,8 @@ class Wrapper {
       const oCtrl = new CtrlClass(
         request, 
         response,
-        mongooseWrapper
+        mongooseWrapper,
+        this.config
       )
       /**
        * 检查指定的方法是否存在
@@ -142,30 +143,35 @@ class Wrapper {
    * 短链接 根据短链接获取真实链接
    */
   async shorturl_decode(shortUrl, wrapper) {
-    const { decode } = require(process.cwd() + `/lib/controllers/shorturl`)
-    return decode(shortUrl, this.context.MongooseContext)
+    const { decode } = require(process.cwd() + `/lib/controllers/shorturl/main`)
+    return decode(shortUrl, this.context.MongooseContextCtrl, this.config)
   }
 }
 
 /**
- * 实例化数据库
+ * 实例化数据库 auth, trace, quota, transformRequest
  */
 function getMongodbModel(mongoose) {
-  const schema1 = new mongoose.Schema(
+  const short_url = new mongoose.Schema(
     {
       clientId: String,
-      api: String,
-      latestAt: Number,
-      minute: Number,
-      hour: Number,
-      day: Number
+      code: String,
+      state: { type: Number, default: 1 },
+      target_title: String,
+      target_url: String,
+      auth: Array,
+      trace: Array,
+      quota: Array,
+      transformRequest: Array,
+      createAt: { type: Date },
+      count: { type: Number, default: 0 }
     },
-    { collection: 'schema1' }
+    { collection: 'short_url' }
   )
 
-  const schema1Model = mongoose.model('schema1', schema1)
+  const shorturlSchema = mongoose.model('short_url', short_url)
 
-  return {schema1Model}
+  return { shorturlSchema }
 }
 
 module.exports = async function(ctx, config) {
@@ -174,7 +180,7 @@ module.exports = async function(ctx, config) {
   if (config.mongodb) {
     const MongoContext = require('../mongo')
     const mongo = await MongoContext.ins(config.mongodb)
-    context.MongooseContext = getMongodbModel(mongo.mongoose)
+    context.MongooseContextCtrl = getMongodbModel(mongo.mongoose)
   }
   const wrapper = new Wrapper(context, config)
   

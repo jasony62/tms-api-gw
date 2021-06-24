@@ -107,11 +107,28 @@ class Gateway {
       return 
     }
 
+    const parseBody = (req) => {
+      return new Promise((resolve, reject) => {
+        let body = ''
+        req.on('data', chunk => {
+          body += chunk
+        })
+        req.on('end', () => {
+          resolve(body)
+        })
+      })
+    }
+
     const app = http.createServer(async (req, res) => {
       const getUrl = new URL(req.url, "http://" + req.headers.host)
       req.path = getUrl.pathname
+      req.body = await parseBody(req)
+      if (req.headers["content-type"].indexOf("application/json") !== -1) {
+        req.body = JSON.parse(req.body)
+      }
+
       await this.ctx.controller.fnCtrl(req, res)
-      if (!res.statusCode) res.statusCode = 200
+      
       if (!res.hasHeader('Content-Type')) res.setHeader("Content-Type", "application/json;charset=utf-8")
       if (!res.body) res.body = ""
       if (typeof res.body !== "string") res.body = JSON.stringify(res.body)

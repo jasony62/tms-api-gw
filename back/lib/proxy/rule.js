@@ -63,16 +63,18 @@ HttpProxyRules.prototype.match = async function match(req, redundancyOptions) {
     }
   }
 
-  // 短链接
+  // 短链接 
   if (!targetRule && this.controller) {
-    const shorturl_prefix = this.controller.config.shorturl.prefix
-    const urlObj = new URL(path, "http://" + req.headers.host)
-    let pathname = urlObj.pathname.substr(0, urlObj.pathname.lastIndexOf("/"))
-    if (pathname === shorturl_prefix) {
-      targetRule = await this.controller.shorturl_decode(path)
-      req.url = urlObj.search
-      target = targetRule.target
-      urlPrefix = shorturl_prefix
+    const { prefix: shorturl_prefix, host: shorturl_host } = this.controller.config.shorturl
+    let url = path.substring(0, path.lastIndexOf("/"))
+    if (url === shorturl_prefix) {
+      const urlObj = new URL(path, "http://" + req.headers.host)
+      targetRule = await this.controller.shorturl_decode(urlObj.pathname)
+      if (targetRule) {
+        req.url = urlObj.search
+        target = targetRule.target_url
+        urlPrefix = shorturl_prefix
+      }
     }
   }
 
