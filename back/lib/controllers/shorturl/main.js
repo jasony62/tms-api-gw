@@ -1,4 +1,5 @@
 const Base = require('../base')
+const { ResultFault, ResultData } = require('../response')
 
 class Main extends Base {
   constructor(...args) {
@@ -12,6 +13,12 @@ class Main extends Base {
 
     const { url, auth, trace, quota, transformRequest, title } = this.request.body
     
+    try {
+      new URL(url)
+    } catch (err) {
+      return new ResultFault("url地址格式错误")
+    }
+
     const Model = this.model("/shorturl")
     let rst = await Model.byUrl(url)
     if (!rst) {
@@ -24,6 +31,30 @@ class Main extends Base {
       title: rst.title,
       create_at: rst.createAt
     }
+  }
+  /**
+   * 
+   */
+   async deleteByUrl() {
+    if (this.request.method !== "POST") return new ResultFault("request method != post")
+
+    const { url } = this.request.body
+    
+    try {
+      new URL(url)
+    } catch (err) {
+      return new ResultFault("url地址格式错误")
+    }
+
+    const Model = this.model("/shorturl")
+    let rst = await Model.byUrl(url)
+    if (!rst) {
+      return new ResultFault("指定的url不存在")
+    }
+
+    const delRst = await Model.deleteByUrl(url)
+    
+    return new ResultData("成功")
   }
 }
 /**

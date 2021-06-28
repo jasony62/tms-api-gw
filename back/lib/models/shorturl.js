@@ -9,7 +9,7 @@ class Shorturl extends Base {
    * 
    */
   async byUrl(url) {
-    return this.shortMongoose.findOne({target_url: url})
+    return this.shortMongoose.findOne({target_url: url, state: 1})
   }
   /**
    * 
@@ -39,8 +39,14 @@ class Shorturl extends Base {
   /**
    * 
    */
+  async deleteByUrl(url) {
+    return this.shortMongoose.updateOne({target_url: url}, {$set: {state: 0}}).then( r => r )
+  }
+  /**
+   * 
+   */
   async byCode(code) {
-    return this.shortMongoose.findOne({code})
+    return this.shortMongoose.findOne({code, state: 1})
   }
 }
 
