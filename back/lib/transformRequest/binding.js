@@ -1,7 +1,7 @@
-module.exports = function(clientId, req, target, redundancyOptions) {
+module.exports = function(clientId, req, target) {
   
-  if (redundancyOptions.client && redundancyOptions.client.data && redundancyOptions.client.data.cust_id) 
-    req.headers["x-request-custid"] = redundancyOptions.client.data.cust_id
+  if (req.clientInfo && req.clientInfo.data && req.clientInfo.data.cust_id) 
+    req.headers["x-request-custid"] = req.clientInfo.data.cust_id
   else return Promise.reject({msg: "未找到custid"})
 
   return Promise.resolve({ })

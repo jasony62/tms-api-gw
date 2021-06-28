@@ -38,10 +38,8 @@ class Gateway {
         req.headers['x-request-id'] = uuid()
       }
       req.headers['x-request-at'] = new Date() * 1
-      // 冗余属性存放
-      let redundancyOptions = {}
       // 匹配路由
-      let target = await this.rules.match(req, redundancyOptions)
+      let target = await this.rules.match(req)
       if (!target) {
         // 没有匹配的目标直接返回
         res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })
@@ -55,7 +53,7 @@ class Gateway {
       let clientId
       if (this.ctx.auth) {
         try {
-          clientId = await this.ctx.auth.check(req, res, redundancyOptions)
+          clientId = await this.ctx.auth.check(req, res)
           this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "auth")
         } catch (err) {
           this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "auth", err)
@@ -80,7 +78,7 @@ class Gateway {
       // 转换请求
       if (this.ctx.transformRequest) {
         try {
-          const rst = await this.ctx.transformRequest.check(clientId, req, target, redundancyOptions)
+          const rst = await this.ctx.transformRequest.check(clientId, req, target)
           if (rst.target) target = rst.target
           this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "transformRequest")
         } catch (err) {

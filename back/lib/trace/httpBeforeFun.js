@@ -1,7 +1,7 @@
 const _ = require("lodash")
 
 module.exports = function(req, event, clientId, headers = {}, data) {
-  if (req.clientObj) headers["x-request-client"] = process.env.YZ_CLIENTID ? _.get(req.clientObj, process.env.YZ_CLIENTID, "") : req.clientObj.data.custId
+  if (req.clientInfo) headers["x-request-client"] = process.env.YZ_CLIENTID ? _.get(req.clientInfo, process.env.YZ_CLIENTID, "") : req.clientInfo.data.custId
 
   if (process.env.TMS_YZ_GOODID) {
     const urlPrefix = JSON.parse(process.env.TMS_YZ_GOODID)

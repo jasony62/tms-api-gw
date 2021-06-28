@@ -190,6 +190,7 @@ class Trace {
     let datas = { checkpointStatus, clientId }
     if (type === "auth") {
       datas.auth_elapseMs = current - req.headers['x-request-at']
+      datas.clientInfo = req.clientInfo
     } else if (type === "error") {
       datas.reqErrorAt = current
       datas.err_elapseMs = current - req.headers['x-request-at']
@@ -219,6 +220,7 @@ Trace.createModel = function(mongoose) {
         requestId: String,
         requestAt: { type: Date },
         clientId: String,
+        clientInfo: { type: Object, default: {} },
         recvUrl: {
           protocol: String,
           hostname: String,
