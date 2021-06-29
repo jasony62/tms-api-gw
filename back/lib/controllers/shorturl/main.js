@@ -25,12 +25,12 @@ class Main extends Base {
       rst = await Model.add(url, { auth, trace, quota, transformRequest, target_title: title })
     }
 
-    return {
+    return new ResultData({
       short_url: `${this.appConfig.shorturl.host}${this.appConfig.shorturl.prefix}/${rst.code}`,
-      url: rst.target_url,
+      // url: rst.target_url,
       title: rst.title,
       create_at: rst.createAt
-    }
+    })
   }
   /**
    * 
