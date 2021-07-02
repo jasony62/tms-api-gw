@@ -40,7 +40,7 @@ class Shorturl extends Base {
    * 
    */
   async deleteByUrl(url) {
-    return this.shortMongoose.updateOne({target_url: url}, {$set: {state: 0}}).then( r => r )
+    return this.shortMongoose.updateOne({target_url: url, state: 1}, {$set: {state: 0}}).then( r => r )
   }
   /**
    * 

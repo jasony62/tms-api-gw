@@ -11,7 +11,7 @@ class Main extends Base {
   async encode() {
     if (this.request.method !== "POST") return new ResultFault("request method != post")
 
-    const { url, auth, trace, quota, transformRequest, title } = this.request.body
+    const { url, auth = null, trace = null, quota = null, transformRequest = null, title = "" } = this.request.body
     
     try {
       new URL(url)
@@ -27,6 +27,7 @@ class Main extends Base {
 
     return new ResultData({
       short_url: `${this.appConfig.shorturl.host}${this.appConfig.shorturl.prefix}/${rst.code}`,
+      short_url_code: rst.code,
       // url: rst.target_url,
       title: rst.title,
       create_at: rst.createAt
