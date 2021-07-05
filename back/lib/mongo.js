@@ -40,7 +40,7 @@ MongoContext.connect = function(url) {
 }
 MongoContext.ins = (function() {
   let _instances = new Map()
-  return async function({ user, password, host, port, database }) {
+  return async function({ user, password, host, port, database, maxPoolSize }) {
     if (typeof host !== 'string') {
       let msg = '没有指定mongodb的主机地址'
       logger.error(msg)
@@ -58,10 +58,13 @@ MongoContext.ins = (function() {
     }
 
     let url
+    maxPoolSize = +maxPoolSize
     if (user && typeof user === "string" && password && typeof password === "string") {
       url = `mongodb://${user}:${password}@${host}:${port}/${database}?authSource=admin`
+      if (maxPoolSize > 5) url += `&maxPoolSize=${maxPoolSize}` 
     } else {
       url = `mongodb://${host}:${port}/${database}`
+      if (maxPoolSize > 5) url += `?maxPoolSize=${maxPoolSize}` 
     }
 
     if (_instances.has(url)) return _instances.get(url)
