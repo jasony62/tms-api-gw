@@ -28,7 +28,11 @@ class Main extends Base {
     return new ResultData({
       short_url: `${this.appConfig.shorturl.host}${this.appConfig.shorturl.prefix}/${rst.code}`,
       short_url_code: rst.code,
-      // url: rst.target_url,
+      url: rst.target_url,
+      auth: rst.auth,
+      trace: rst.trace,
+      quota: rst.quota,
+      transformRequest: rst.transformRequest,
       title: rst.title,
       create_at: rst.createAt
     })
