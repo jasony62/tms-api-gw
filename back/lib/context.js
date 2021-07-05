@@ -30,7 +30,7 @@ Config.ins = (function() {
       return Promise.reject(new ConfigError(msg))
     }
 
-    const { port, proxy, trace, quota, auth, transformRequest, pushMessage } = require(filename)
+    const { port, proxy, trace, quota, auth, transformRequest, pushMessage, controller } = require(filename)
     _ins = new Config(port, proxy)
     if (trace && (trace.enable === undefined || trace.enable === true))
       _ins.trace = trace
@@ -42,12 +42,15 @@ Config.ins = (function() {
       _ins.transformRequest = transformRequest
     if (pushMessage && (pushMessage.enable === undefined || pushMessage.enable === true))
       _ins.pushMessage = pushMessage
+    if (controller && (controller.enable === undefined || controller.enable === true))
+      _ins.controller = controller
 
     logger.info('日志服务：', _ins.trace ? '打开' : '否')
     logger.info('配额服务：', _ins.quota ? '打开' : '否')
     logger.info('认证服务：', _ins.auth ? '打开' : '否')
     logger.info('转换请求服务：', _ins.transformRequest ? '打开' : '否')
     logger.info('消息推送服务：', _ins.pushMessage ? '打开' : '否')
+    logger.info('控制器：', _ins.controller ? '打开' : '否')
 
     return _ins
   }
@@ -76,13 +79,13 @@ Context.ins = (function() {
       ctx.trace = trace
     }
     /* quota */
-    if (config.quota && config.quota.mongodb) {
+    if (config.quota) {
       const MongoContext = require('./mongo')
       const mongo = await MongoContext.ins(config.quota.mongodb)
       const quota = require('./quota')(
         ctx.emitter,
         mongo.mongoose,
-        config.quota.rules
+        config.quota
       )
       ctx.quota = quota
     }
@@ -91,7 +94,7 @@ Context.ins = (function() {
       const auth = require('./auth')(config.auth)
       ctx.auth = auth
     }
-    /* auth */
+    /* transformRequest */
     if (config.transformRequest) {
       const transformRequest = require('./transformRequest')(config.transformRequest)
       ctx.transformRequest = transformRequest
@@ -101,6 +104,12 @@ Context.ins = (function() {
       const pushMsg = require('./pushMessage')
       const instance = await pushMsg(ctx.emitter, config.pushMessage)
       ctx.pushMessage = instance
+    }
+    /* pushMessage */
+    if (config.controller) {
+      const ctrlWrapper = require('./controllers')
+      const wrapper = await ctrlWrapper(ctx, config.controller)
+      ctx.controller = wrapper
     }
 
     return ctx

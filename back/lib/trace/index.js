@@ -1,5 +1,5 @@
 const log4js = require('@log4js-node/log4js-api')
-const logger = log4js.getLogger('tms-api-gw')
+const logger = log4js.getLogger('tms-api-gw-trace')
 const _ = require('lodash')
 const PATH = require("path")
 const fs = require("fs")
@@ -77,7 +77,7 @@ async function _eventTrace(req, ctx, TraceObj, event, datas, options = {}) {
           targetTc.mongoose.create(
             datas,
             err => {
-              if (err) logger.warn('TraceLog.create', err)
+              if (err) logger.error(`TraceLog.create || ${req.headers['x-request-id']} || ${req.originUrl} || ${new Date() * 1 - req.headers['x-request-at']}`, err)
             }
           )
         } else {
@@ -112,8 +112,7 @@ class Trace {
    * @param {*} req
    */
   async logRecvReq(req, res, ctx) {
-    logger.debug('logRecvReq enter')
-    const { method, headers, originUrl: url, targetRule } = req
+    const { method, headers, originUrl: url } = req
     const requestId = headers['x-request-id']
     const recvUrl = _.pick(require('url').parse(url, true), [
       'protocol',
@@ -123,14 +122,14 @@ class Trace {
       'query'
     ])
     
-    const datas = { requestId, recvUrl, method, recvHeaders: headers }
+    const datas = { requestId, recvUrl, method, recvHeaders: headers, requestAt: req.headers['x-request-at'] }
     _eventTrace(req, ctx, this, "recvReq", datas)
 
+    logger.debug(`logRecvReq || ${req.headers['x-request-id']} || ${req.originUrl} || ${new Date() * 1 - req.headers['x-request-at']}`)
     return 
   }
 
   async logSendReq(proxyReq, req, res, options, ctx) {
-    logger.debug('logSendReq enter ' + req.originUrl)
     const sendUrl = _.pick(options.target, [
       'protocol',
       'hostname',
@@ -142,46 +141,70 @@ class Trace {
 
     let recvBody
     if ('POST' == req.method) recvBody = await parseBody(req)
-    const datas = { clientId, sendUrl, sendHeaders: req.headers, recvBody }
+    const current = new Date() * 1
+    const send_elapseMs = current - req.headers['x-request-at']
+    const datas = { clientId, sendUrl, sendHeaders: req.headers, recvBody, send_elapseMs, reqSendAt: current }
 
     _eventTrace(req, ctx, this, "sendReq", datas)
-    
+
+    logger.debug(`logSendReq || ${req.headers['x-request-id']} || ${req.originUrl} || ${new Date() * 1 - req.headers['x-request-at']}`)
     return 
   }
 
   async logResponse(proxyRes, req, res, ctx) {
-    logger.debug('logResponse enter ' + req.originUrl)
-
     let body = []
     proxyRes.on('data', chunk => {
       body.push(chunk)
     })
     proxyRes.on('end', async () => {
       body = Buffer.concat(body).toString()
+      const current = new Date() * 1
       const requestAt = req.headers['x-request-at']
-      const elapseMs = new Date() * 1 - requestAt
+      const res_elapseMs = current - requestAt
       const { statusCode, statusMessage, headers } = proxyRes
       const datas = {
         statusCode,
         statusMessage,
         responseHeaders: headers,
         responseBody: body,
-        elapseMs
+        res_elapseMs,
+        responseAt: current
       }
       _eventTrace(req, ctx, this, "response", datas, { proxyRes: { statusCode, statusMessage, headers } })
+      logger.debug(`logResponse || ${req.headers['x-request-id']} || ${req.originUrl} || ${new Date() * 1 - req.headers['x-request-at']}`)
     })
   }
 
-  async logCheckpointReq(req, res, ctx, type, error) {
+  async logCheckpointReq(req, res, ctx, type, error = "") {
+    let current = new Date() * 1
+
     if (!type) 
       return 
 
-    let checkpointStatus = {}
-    checkpointStatus[type] = error.msg
+    let checkpointStatus = {}, checkpointStatusMsg = "passe"
+
+    if (error) checkpointStatusMsg = error.msg
+    checkpointStatus[type] = checkpointStatusMsg
 
     const clientId = req.headers['x-request-client']
-    const datas = { checkpointStatus, clientId }
+    let datas = { checkpointStatus, clientId }
+    if (type === "auth") {
+      datas.auth_elapseMs = current - req.headers['x-request-at']
+      datas.clientInfo = req.clientInfo
+    } else if (type === "error") {
+      datas.reqErrorAt = current
+      datas.err_elapseMs = current - req.headers['x-request-at']
+    } else if (type === "transformRequest") {
+      datas.transformRequest_elapseMs = current - req.headers['x-request-at']
+    } else if (type === "quota") {
+      datas.quota_elapseMs = current - req.headers['x-request-at']
+    }
+
     _eventTrace(req, ctx, this, "checkpoint", datas)
+
+    let msg = `logCheckpointReq ${type} || ${req.headers['x-request-id']} || ${req.originUrl} || ${current - req.headers['x-request-at']}`
+    if ( error ) logger.error(msg, error)
+    else logger.debug(msg)
 
     return 
   }
@@ -195,8 +218,9 @@ Trace.createModel = function(mongoose) {
     new Schema(
       {
         requestId: String,
-        requestAt: { type: Date, default: Date.now },
+        requestAt: { type: Date },
         clientId: String,
+        clientInfo: { type: Object, default: {} },
         recvUrl: {
           protocol: String,
           hostname: String,
@@ -207,6 +231,7 @@ Trace.createModel = function(mongoose) {
         method: String,
         recvHeaders: Object,
         recvBody: String,
+        reqSendAt: { type: Date },
         sendUrl: {
           protocol: String,
           hostname: String,
@@ -217,13 +242,21 @@ Trace.createModel = function(mongoose) {
         sendHeaders: Object,
         statusCode: { type: Number, default: 0 },
         statusMessage: { type: String, default: '' },
+        responseAt: { type: Date },
         responseHeaders: { type: Object, default: {} },
         responseBody: { type: String, default: '' },
-        elapseMs: { type: Number, default: 0 },
+        auth_elapseMs: { type: Number, default: 0 },
+        quota_elapseMs: { type: Number, default: 0 },
+        transformRequest_elapseMs: { type: Number, default: 0 },
+        send_elapseMs: { type: Number, default: 0 },
+        res_elapseMs: { type: Number, default: 0 },
         checkpointStatus: {
           auth: String,
-          quota: String
-        }
+          quota: String,
+          error: String
+        },
+        reqErrorAt: { type: Date },
+        err_elapseMs: { type: Number, default: 0 },
       },
       { collection: 'trace_log' }
     )

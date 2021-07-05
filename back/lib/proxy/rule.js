@@ -1,10 +1,11 @@
 /**
  * This is a constructor for a HttpProxyRules instance.
- * @param {Object} options Takes in a `rules` obj, (optional) `default` target
+ * @param {Object} ctx Takes in a `rules` obj, (optional) `default` target
  */
-function HttpProxyRules(options) {
-  this.rules = options.rules
-  this.default = options.default || null
+function HttpProxyRules(ctx) {
+  this.rules = ctx.config.proxy.rules
+  this.default = ctx.config.proxy.default || null
+  this.controller = ctx.controller
 
   return this
 }
@@ -14,7 +15,7 @@ function HttpProxyRules(options) {
  * We also return the new endpoint string if a match is found.
  * @param  {Object} req Takes in a `req` object.
  */
-HttpProxyRules.prototype.match = function match(req, redundancyOptions) {
+HttpProxyRules.prototype.match = async function match(req) {
   let rules = this.rules
   let target = this.default
   let path = req.url
@@ -61,17 +62,26 @@ HttpProxyRules.prototype.match = function match(req, redundancyOptions) {
       break
     }
   }
+
+  // 短链接 
+  if (!targetRule && this.controller) {
+    const { prefix: shorturl_prefix, host: shorturl_host } = this.controller.config.shorturl
+    let url = path.substring(0, path.lastIndexOf("/"))
+    if (url === shorturl_prefix) {
+      const urlObj = new URL(path, "http://" + req.headers.host)
+      targetRule = await this.controller.shorturl_decode(urlObj.pathname)
+      if (targetRule) {
+        req.url = urlObj.search
+        target = targetRule.target_url
+        urlPrefix = shorturl_prefix
+      }
+    }
+  }
+
   req.targetRule = targetRule
   req.urlPrefix = urlPrefix
   req.originUrl = path
   req.targetUrl = target + req.url
-  
-  redundancyOptions.req = {
-    targetRule: targetRule,
-    urlPrefix: urlPrefix,
-    originUrl: path,
-    targetUrl: target + req.url
-  }
 
   return target
 }

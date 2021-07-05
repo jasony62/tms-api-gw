@@ -3,22 +3,24 @@ const logger = log4js.getLogger('tms-api-gw_idx')
 const ProxyRules = require('./proxy/rule')
 const uuid = require('uuid')
 const Context = require('./context')
-const quota = require('./quota')
+const http = require('http')
 
 class Gateway {
   constructor(ctx) {
     this.ctx = ctx
     this.port = ctx.config.port
-    this.rules = new ProxyRules(ctx.config.proxy)
+    this.rules = new ProxyRules(ctx)
   }
+  /**
+   * gateway
+   */
   createGateway() {
-    const http = require('http')
     const httpProxy = require('http-proxy')
     //创建代理服务器监听捕获异常事件
     const proxy = httpProxy.createProxyServer()
     // 异常事件不处理
     proxy.on('error', (err, req, res) => {
-      logger.error("logError " + req.originUrl, err)
+      this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "error", err)
       res.end()
     })
     // 准备发送请求
@@ -32,13 +34,12 @@ class Gateway {
     // 启动http服务
     const app = http.createServer(async (req, res) => {
       // 设置唯一id，便于跟踪
-      req.headers['x-request-id'] = uuid()
+      if (!req.headers['x-request-id']) {
+        req.headers['x-request-id'] = uuid()
+      }
       req.headers['x-request-at'] = new Date() * 1
-      
-      // 冗余属性存放
-      let redundancyOptions = {}
       // 匹配路由
-      let target = this.rules.match(req, redundancyOptions)
+      let target = await this.rules.match(req)
       if (!target) {
         // 没有匹配的目标直接返回
         res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })
@@ -52,9 +53,9 @@ class Gateway {
       let clientId
       if (this.ctx.auth) {
         try {
-          clientId = await this.ctx.auth.check(req, res, redundancyOptions)
+          clientId = await this.ctx.auth.check(req, res)
+          this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "auth")
         } catch (err) {
-          logger.error("auth", req.url, err)
           this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "auth", err)
           res.writeHead(401, { 'Content-Type': 'text/plain; charset=utf-8' })
           return res.end(err.msg)
@@ -66,6 +67,7 @@ class Gateway {
       if (this.ctx.quota && clientId) {
         try {
           await this.ctx.quota.check(req)
+          this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "quota")
         } catch (err) {
           this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "quota", err)
           res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' })
@@ -76,14 +78,16 @@ class Gateway {
       // 转换请求
       if (this.ctx.transformRequest) {
         try {
-          const rst = await this.ctx.transformRequest.check(clientId, req, target, redundancyOptions)
+          const rst = await this.ctx.transformRequest.check(clientId, req, target)
           if (rst.target) target = rst.target
+          this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "transformRequest")
         } catch (err) {
-          logger.error("transformRequest", req.url, err)
+          this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "transformRequest", err)
           res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' })
           return res.end(err.msg)
         }
       }
+
       // 执行反向代理
       proxy.web(req, res, { target })
 
@@ -93,14 +97,56 @@ class Gateway {
       logger.info('Tms Api Gateway is runing at %d', this.port)
     })
   }
+  /**
+   * controllers
+   */
+  createController() {
+    if (!this.ctx.controller) {
+      return 
+    }
+
+    const parseBody = (req) => {
+      return new Promise((resolve, reject) => {
+        let body = ''
+        req.on('data', chunk => {
+          body += chunk
+        })
+        req.on('end', () => {
+          resolve(body)
+        })
+      })
+    }
+
+    const app = http.createServer(async (req, res) => {
+      const getUrl = new URL(req.url, "http://" + req.headers.host)
+      req.path = getUrl.pathname
+      req.body = await parseBody(req)
+      if (req.headers["content-type"].indexOf("application/json") !== -1) {
+        req.body = JSON.parse(req.body)
+      }
+
+      await this.ctx.controller.fnCtrl(req, res)
+      
+      if (!res.hasHeader('Content-Type')) res.setHeader("Content-Type", "application/json;charset=utf-8")
+      if (!res.body) res.body = ""
+      if (typeof res.body !== "string") res.body = JSON.stringify(res.body)
+      res.end(res.body)
+      return
+    })
+
+    let ctrlPort = this.ctx.controller.config.port
+    app.listen(ctrlPort, () => {
+      logger.info('Tms Api Gateway-controller is runing at %d', ctrlPort)
+    })
+  }
 }
 Gateway.startup = async function() {
   try {
     const ctx = await Context.ins()
     const gateway = new Gateway(ctx)
     gateway.createGateway()
+    gateway.createController()
   } catch (e) {
-    const http = require('http')
     const app = http.createServer(async (req, res) => {
       logger.error("createGateway", e)
       res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' })

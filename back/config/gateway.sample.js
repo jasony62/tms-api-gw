@@ -1,10 +1,12 @@
-let host, port
+let host, port, ctrlPort
 if (process.env.TMS_API_GW_ENV === 'docker') {
   host = 'docker.for.mac.host.internal'
   port = 3000
+  ctrlPort = 3001
 } else {
   host = 'localhost'
   port = 5678
+  ctrlPort = 5679
 }
 module.exports = {
   port,
@@ -22,7 +24,8 @@ module.exports = {
       password: false,
       host,
       port: 27017,
-      database: 'tms-api-gw'
+      database: 'tms-api-gw',
+      // maxPoolSize: 10 // default 5
     },
     http: {
       type: "http",
@@ -40,13 +43,15 @@ module.exports = {
       port: 27017,
       database: 'tms-api-gw'
     },
-    rules: {
+    rule1: {
       rateLimit: {
         minute: {
-          limit: 0
+          limit: process.env.TMS_QUOTA_RATELIMIT_MINUTE || 0
         }
       }
-    }
+    },
+    rule2: "./lib/quota/test.js",
+    default: []
   },
   auth: {
     enable: false,
@@ -77,4 +82,24 @@ module.exports = {
       channel: 'tms-api-gw-pushMessage',
     }
   },
+  controller: {
+    enable: true,
+    port: ctrlPort,
+    mongodb: {
+      host: host,
+      port: 27017,
+      database: 'tms-api-gw',
+      user: false,
+      password: false
+    },
+    router: {
+      controllers: {
+        prefix: "" // 接口调用url的前缀
+      },
+    },
+    shorturl: {
+      host: host,
+      prefix: "/s"
+    }
+  }
 }
