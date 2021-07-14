@@ -36,7 +36,7 @@ class Ctrl {
    * @param {string} name 模型的名称（从models目录下开始）
    */
   model(name) {
-    const path = `${process.cwd()}/lib/models/${name}`
+    const path = `${process.cwd()}/lib/API/models/${name}`
     const Model = require(path)
     return (new Model(this.mongoose))
   }

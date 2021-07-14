@@ -20,9 +20,9 @@ class Wrapper {
    */
   findCtrlClassInControllers(ctrlName, path) {
     // 从控制器路径查找
-    let ctrlPath = process.cwd() + `/lib/controllers/${ctrlName}.js`
+    let ctrlPath = process.cwd() + `/lib/API/controllers/${ctrlName}.js`
     if (!fs.existsSync(ctrlPath)) {
-      ctrlPath = process.cwd() + `/lib/controllers/${ctrlName}/main.js`
+      ctrlPath = process.cwd() + `/lib/API/controllers/${ctrlName}/main.js`
       if (!fs.existsSync(ctrlPath)) {
         let logMsg = `参数错误，请求的控制器不存在(2)`
         logger.isDebugEnabled()
@@ -143,7 +143,7 @@ class Wrapper {
    * 短链接 根据短链接获取真实链接
    */
   async shorturl_decode(shortUrl, wrapper) {
-    const { decode } = require(process.cwd() + `/lib/controllers/shorturl/main`)
+    const { decode } = require(process.cwd() + `/lib/API/controllers/shorturl/main`)
     return decode(shortUrl, this.context.MongooseContextCtrl, this.config)
   }
 }
@@ -178,7 +178,7 @@ module.exports = async function(ctx, config) {
   //
   let context = {}
   if (config.mongodb) {
-    const MongoContext = require('../mongo')
+    const MongoContext = require('../../mongo')
     const mongo = await MongoContext.ins(config.mongodb)
     context.MongooseContextCtrl = getMongodbModel(mongo.mongoose)
   }

@@ -111,7 +111,7 @@ module.exports = {
       channel: process.env.TMS_SENDMESSAGE_REDIS_CHANNEL || 'tms-api-gw-pushMessage',
     }
   },
-  controller: {
+  API: {
     enable: process.env.TMS_CONTROLLER_ENABLE === "true" ? true : false,
     port: ctrlPort,
     mongodb: {
@@ -126,10 +126,20 @@ module.exports = {
       controllers: {
         prefix: process.env.TMS_APP_ROUTER_CONTROLLER || "" // 接口调用url的前缀
       },
+      metrics: {
+        prefix: process.env.TMS_METRICS_ROUTER_PREFIX || "/metrics" // metrics url的前缀
+      },
     },
     shorturl: {
       host: process.env.TMS_APP_SHORTURL_HOST || "http://localhost",
       prefix: process.env.TMS_APP_SHORTURL_PREFIX || "/s"
+    },
+    metrics: {
+      enable: process.env.TMS_METRICS_ENABLE === "true" ? true : false,
+      collectDefault: process.env.TMS_METRICS_COLLECTDEFAULT || true, // 是否包含默认系统监控指标
+      gatewayProfile: {
+        prefix: process.env.TMS_METRICS_GWPROFILE_PREFIX || 'tms_api_gw', // 指标前缀
+      },
     }
-  }
+  },
 }

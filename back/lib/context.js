@@ -30,7 +30,7 @@ Config.ins = (function() {
       return Promise.reject(new ConfigError(msg))
     }
 
-    const { port, proxy, trace, quota, auth, transformRequest, pushMessage, controller } = require(filename)
+    const { port, proxy, trace, quota, auth, transformRequest, pushMessage, API } = require(filename)
     _ins = new Config(port, proxy)
     if (trace && (trace.enable === undefined || trace.enable === true))
       _ins.trace = trace
@@ -42,15 +42,18 @@ Config.ins = (function() {
       _ins.transformRequest = transformRequest
     if (pushMessage && (pushMessage.enable === undefined || pushMessage.enable === true))
       _ins.pushMessage = pushMessage
-    if (controller && (controller.enable === undefined || controller.enable === true))
-      _ins.controller = controller
+    if (API && (API.enable === undefined || API.enable === true))
+      _ins.API = API
+    if (API.metrics && (API.metrics.enable === undefined || API.metrics.enable === true))
+      _ins.API.metrics = API.metrics
 
     logger.info('日志服务：', _ins.trace ? '打开' : '否')
     logger.info('配额服务：', _ins.quota ? '打开' : '否')
     logger.info('认证服务：', _ins.auth ? '打开' : '否')
     logger.info('转换请求服务：', _ins.transformRequest ? '打开' : '否')
     logger.info('消息推送服务：', _ins.pushMessage ? '打开' : '否')
-    logger.info('控制器：', _ins.controller ? '打开' : '否')
+    logger.info('API服务：', _ins.API ? '打开' : '否')
+    logger.info('监控服务：', _ins.API.metrics ? '打开' : '否')
 
     return _ins
   }
@@ -106,10 +109,16 @@ Context.ins = (function() {
       ctx.pushMessage = instance
     }
     /* pushMessage */
-    if (config.controller) {
-      const ctrlWrapper = require('./controllers')
-      const wrapper = await ctrlWrapper(ctx, config.controller)
-      ctx.controller = wrapper
+    if (config.API) {
+      const ctr = require('./API/controllers')
+      const instance = await ctr(ctx, config.API)
+      ctx.API = instance
+    }
+    /* metrics */
+    if (config.API.metrics) {
+      const metrics = require('./API/metrics')
+      const instance = await metrics(ctx, config.API.metrics)
+      ctx.API.metrics = instance
     }
 
     return ctx

@@ -4,6 +4,7 @@ const ProxyRules = require('./proxy/rule')
 const uuid = require('uuid')
 const Context = require('./context')
 const http = require('http')
+const _ = require("lodash")
 
 class Gateway {
   constructor(ctx) {
@@ -100,10 +101,14 @@ class Gateway {
   /**
    * controllers
    */
-  createController() {
-    if (!this.ctx.controller) {
+  createAPI() {
+    if (!this.ctx.API) {
       return 
     }
+    const APIContent = this.ctx.API
+    const ctrConfig = APIContent.config
+    const metricsPrefix = _.get(ctrConfig, "router.metrics.prefix", null)
+    const ctrPrefix = _.get(ctrConfig, "router.controllers.prefix", null)
 
     const parseBody = (req) => {
       return new Promise((resolve, reject) => {
@@ -120,21 +125,35 @@ class Gateway {
     const app = http.createServer(async (req, res) => {
       const getUrl = new URL(req.url, "http://" + req.headers.host)
       req.path = getUrl.pathname
-      req.body = await parseBody(req)
-      if (req.headers["content-type"].indexOf("application/json") !== -1) {
-        req.body = JSON.parse(req.body)
+      if (req.method === "POST") {
+        req.body = await parseBody(req)
+        if (req.headers["content-type"] && req.headers["content-type"].indexOf("application/json") !== -1) {
+          req.body = JSON.parse(req.body)
+        }
       }
 
-      await this.ctx.controller.fnCtrl(req, res)
-      
-      if (!res.hasHeader('Content-Type')) res.setHeader("Content-Type", "application/json;charset=utf-8")
-      if (!res.body) res.body = ""
-      if (typeof res.body !== "string") res.body = JSON.stringify(res.body)
-      res.end(res.body)
-      return
+      if (metricsPrefix !== null && req.path.indexOf(metricsPrefix) === 0) {
+        if (APIContent.metrics) {
+          const metrics = await APIContent.metrics.register.metrics()
+          return res.end(metrics)
+        } else {
+          res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })
+          return res.end('未开启监控服务')
+        }
+      } else if (ctrPrefix !== null && req.path.indexOf(ctrPrefix) === 0) {
+        await APIContent.fnCtrl(req, res)
+
+        if (!res.hasHeader('Content-Type')) res.setHeader("Content-Type", "application/json;charset=utf-8")
+        if (!res.body) res.body = ""
+        if (typeof res.body !== "string") res.body = JSON.stringify(res.body)
+        return res.end(res.body)
+      } else {
+        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })
+        return res.end('未找到指定路径')
+      }
     })
 
-    let ctrlPort = this.ctx.controller.config.port
+    let ctrlPort = ctrConfig.port
     app.listen(ctrlPort, () => {
       logger.info('Tms Api Gateway-controller is runing at %d', ctrlPort)
     })
@@ -145,7 +164,7 @@ Gateway.startup = async function() {
     const ctx = await Context.ins()
     const gateway = new Gateway(ctx)
     gateway.createGateway()
-    gateway.createController()
+    gateway.createAPI()
   } catch (e) {
     const app = http.createServer(async (req, res) => {
       logger.error("createGateway", e)

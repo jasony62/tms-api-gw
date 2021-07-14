@@ -5,7 +5,7 @@
 function HttpProxyRules(ctx) {
   this.rules = ctx.config.proxy.rules
   this.default = ctx.config.proxy.default || null
-  this.controller = ctx.controller
+  this.API = ctx.API
 
   return this
 }
@@ -64,12 +64,12 @@ HttpProxyRules.prototype.match = async function match(req) {
   }
 
   // 短链接 
-  if (!targetRule && this.controller) {
-    const { prefix: shorturl_prefix, host: shorturl_host } = this.controller.config.shorturl
+  if (!targetRule && this.API) {
+    const { prefix: shorturl_prefix, host: shorturl_host } = this.API.config.shorturl
     let url = path.substring(0, path.lastIndexOf("/"))
     if (url === shorturl_prefix) {
       const urlObj = new URL(path, "http://" + req.headers.host)
-      targetRule = await this.controller.shorturl_decode(urlObj.pathname)
+      targetRule = await this.API.shorturl_decode(urlObj.pathname)
       if (targetRule) {
         req.url = urlObj.search
         target = targetRule.target_url
