@@ -82,7 +82,7 @@ module.exports = {
       channel: 'tms-api-gw-pushMessage',
     }
   },
-  controller: {
+  API: {
     enable: true,
     port: ctrlPort,
     mongodb: {
@@ -90,16 +90,26 @@ module.exports = {
       port: 27017,
       database: 'tms-api-gw',
       user: false,
-      password: false
+      password: false,
     },
     router: {
       controllers: {
         prefix: "" // 接口调用url的前缀
       },
+      metrics: {
+        prefix: "/metrics" // metrics url的前缀
+      },
     },
     shorturl: {
-      host: host,
+      host: "http://localhost",
       prefix: "/s"
+    },
+    metrics: {
+      enable: true,
+      collectDefault: true, // 是否包含默认系统监控指标
+      gatewayProfile: {
+        prefix: 'tms_api_gw', // 指标前缀
+      },
     }
-  }
+  },
 }
