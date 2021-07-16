@@ -24,6 +24,15 @@ process.on('uncaughtException', err => {
   logger.fatal(err)
 })
 
+global.prometheus = {
+  metrics: {
+    gw_access: {
+      total: 0,
+      fail: 0,
+      success: 0
+    }
+  }
+}
 
 const gateway = require('./lib')
 

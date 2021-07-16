@@ -152,6 +152,9 @@ class Trace {
   }
 
   async logResponse(proxyRes, req, res, ctx) {
+    if (proxyRes.statusCode == 200) prometheus.metrics.gw_access.success++
+    else prometheus.metrics.gw_access.fail++
+
     let body = []
     proxyRes.on('data', chunk => {
       body.push(chunk)

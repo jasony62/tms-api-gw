@@ -36,12 +36,10 @@ async function getTraceLogTotal(ctx, latestTs, latestTotal) {
   logger.debug("getTraceLogTotal 耗时 2", Date.now() - curr2)
   return [{
     status: "all",
-    // total: latestTotal.all ? total - latestTotal.all.total : total,
     total,
   },
   {
     status: "fail",
-    // total: latestTotal.fail ? countTotal - latestTotal.fail.total : countTotal,
     total: countTotal,
   }]
 }
@@ -72,6 +70,31 @@ const OnlyOnceFetch = {
   },
 }
 
+/* 实现一个时间只取一次*/
+const getMetrics = {
+  run: async (host) => {
+    const total = prometheus.metrics.gw_access.total
+    const failTotal = prometheus.metrics.gw_access.fail
+    const successTotal = prometheus.metrics.gw_access.success
+    prometheus.metrics.gw_access.total = 0
+    prometheus.metrics.gw_access.fail = 0
+    prometheus.metrics.gw_access.success = 0
+
+    return [{
+      status: "all",
+      total,
+    },
+    {
+      status: "fail",
+      total: failTotal,
+    },
+    {
+      status: "success",
+      total: successTotal,
+    }]
+  },
+}
+
 /**
  *
  */
@@ -94,11 +117,16 @@ class ProfileGateway {
       labelNames: ['status'],
       registers: [metricsContext.register],
       collect: async () => {
-        await OnlyOnceFetch.run(this).then((result) => {
+        await getMetrics.run(this).then((result) => {
           result.forEach((nsData) => {
             total.labels({ status: nsData.status }).inc(nsData.total)
           })
         })
+        // await OnlyOnceFetch.run(this).then((result) => {
+        //   result.forEach((nsData) => {
+        //     total.labels({ status: nsData.status }).inc(nsData.total)
+        //   })
+        // })
       },
     })
   }
