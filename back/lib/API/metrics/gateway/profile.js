@@ -112,7 +112,7 @@ class ProfileGateway {
 
     let prefix = this.prefix
     const total = new Counter({
-      name: `${prefix}_trace_log_total`,
+      name: `${prefix}_access_total`,
       help: '当前新增访问量',
       labelNames: ['status'],
       registers: [metricsContext.register],

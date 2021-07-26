@@ -41,29 +41,49 @@ class Gateway {
         req.headers['x-request-id'] = uuid()
       }
       req.headers['x-request-at'] = new Date() * 1
-      // 匹配路由
-      let target = await this.rules.match(req)
-      if (!target) {
+
+      // 获取转发规则
+      const getTargetRst = await this.rules.getTargetRules(req)
+      const targetRule = getTargetRst.targetRule
+      if (!targetRule) {
         // 没有匹配的目标直接返回
         res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })
-        return res.end('Not found')
+        return res.end('Not found targetRule')
+      } else {
+        req.targetRule = targetRule
+        req.url = getTargetRst.newReqUrl
+        req.urlPrefix = getTargetRst.urlPrefix
+        req.originUrl = getTargetRst.originUrl
       }
 
       // 记录收到请求的原始信息
       this.ctx.emitter.emit('recvReq', req, res, this.ctx)
 
       // 身份认证
-      let clientId
+      let clientId, clientLabel
       if (this.ctx.auth) {
         try {
-          clientId = await this.ctx.auth.check(req, res)
+          const authRst = await this.ctx.auth.check(req, res)
+          clientId = authRst.clientId
+          clientLabel = authRst.clientLabel
+          req.clientInfo = authRst.clientInfo
+          req.headers['x-request-client'] = clientId
           this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "auth")
         } catch (err) {
           this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "auth", err)
           res.writeHead(401, { 'Content-Type': 'text/plain; charset=utf-8' })
           return res.end(err.msg)
         }
-        req.headers['x-request-client'] = clientId
+      }
+
+      // 匹配路由
+      let target = this.rules.match(targetRule, clientLabel)
+      if (!target) {
+        // 没有匹配的目标直接返回
+        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })
+        return res.end('Not found target')
+      } else {
+        req.targetUrl = target + req.url
       }
 
       // 检查配额

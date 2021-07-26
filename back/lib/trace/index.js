@@ -143,7 +143,7 @@ class Trace {
     if ('POST' == req.method) recvBody = await parseBody(req)
     const current = new Date() * 1
     const send_elapseMs = current - req.headers['x-request-at']
-    const datas = { clientId, sendUrl, sendHeaders: req.headers, recvBody, send_elapseMs, reqSendAt: current }
+    const datas = { sendUrl, sendHeaders: req.headers, recvBody, send_elapseMs, reqSendAt: current }
 
     _eventTrace(req, ctx, this, "sendReq", datas)
 

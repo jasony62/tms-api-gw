@@ -13,8 +13,7 @@ module.exports = {
   port,
   name: process.env.TMS_APP_NAME || "",
   proxy: {
-    rules: process.env.TMS_PROXY_RULES ? JSON.parse(process.env.TMS_PROXY_RULES) : {},
-    default: ``
+    rules: process.env.TMS_PROXY_RULES ? JSON.parse(process.env.TMS_PROXY_RULES) : {}
   },
   transformRequest: {
     enable: process.env.TMS_TRACEFORNREQ_ENABLE === "false" ? false : true,
@@ -81,6 +80,7 @@ module.exports = {
       query: process.env.TMS_AUTH_HTTP_QUERY ? JSON.parse(process.env.TMS_AUTH_HTTP_QUERY) : ['access_token', 'access_token'],
       url: process.env.TMS_AUTH_HTTP_URL || "http://localhost/auth/token",
       clientIdField: process.env.TMS_AUTH_HTTP_CLIENTIDFIELD || "id",
+      clientLabelField: process.env.TMS_AUTH_HTTP_CLIENTLABELFIELD || "label",
     },
     httpPortal: {
       type: "file",

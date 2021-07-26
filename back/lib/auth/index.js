@@ -39,9 +39,9 @@ class HttpAuth {
         if (fs.existsSync(authPath)) {
           const authFunc = require(authPath)
           if (typeof authFunc === "function") {
-            const rst = await authFunc(req, res)
+            const rst = await authFunc(req, res, tarAth)
             if (rst.code === 0) {
-              return Promise.resolve(rst.clientId)
+              return Promise.resolve({clientId: rst.clientId, clientLabel: rst.clientLabel, clientInfo: rst.clientInfo})
             } else {
               if (errMsg !== "") errMsg += " 或 "
               errMsg += rst.msg
@@ -61,8 +61,8 @@ class HttpAuth {
             if (errMsg !== "") errMsg += " 或 "
             errMsg += `获取${tarAth.clientIdField}失败`
           } else {
-            req.clientInfo = rst.data.result
-            return Promise.resolve(clientId)
+            const clientLabel = _.get(rst.data.result, tarAth.clientLabelField, null)
+            return Promise.resolve({clientId, clientLabel, clientInfo: rst.data.result})
           }
         }
       }

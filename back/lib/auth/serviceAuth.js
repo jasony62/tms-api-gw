@@ -1,6 +1,8 @@
 // 服务商网关
 
 const axios = require('axios')
+const _ = require("lodash")
+
 /**
  * 获得请求中传递的access_token
  *
@@ -35,9 +37,11 @@ module.exports =function (req, res) {
       return {code: 1001, msg: "权限错误"}
     }
 
-    req.clientInfo = client
+    // req.clientInfo = client
 
     const clientId = client.data.uid
-    return { code: 0, clientId }
+    const clientLabelField = process.env.TMS_AUTH_HTTP_CLIENTLABELFIELD
+    const clientLabel = _.get(client, clientLabelField, null)
+    return { code: 0, clientId, clientLabel, clientInfo: client }
   })
 }

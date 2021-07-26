@@ -12,8 +12,27 @@ module.exports = {
   port,
   name: "api-gw",
   proxy: {
-    rules: {"/a/b":"/c/d", "/a2/b2":{"target":"/c2/d2","auth":["httpService"],"trace":["mongodb","http"],"transformRequest":["***"]}},
-    default: `http://${host}:1234`
+    rules: {
+      "/a1/b1":"http://localhost/c/d",
+      "/a2/b2":{
+        "target":"http://localhost/c2/d2",
+        "auth":["httpService"],
+        "trace":["mongodb","http"],
+        "transformRequest":["***"]
+      },
+      "/a3/b3":{
+        "target":[
+          {
+            "url":"http://localhost/c/d",
+            "label":"trial","default":true
+          },
+          {
+            "url":"http://localhost/c2/d2",
+            "label":"official"
+          }
+        ]
+      }
+    }
   },
   trace: {
     enable: true,
@@ -46,7 +65,7 @@ module.exports = {
     rule1: {
       rateLimit: {
         minute: {
-          limit: process.env.TMS_QUOTA_RATELIMIT_MINUTE || 0
+          limit: 0
         }
       }
     },
@@ -58,7 +77,9 @@ module.exports = {
     http: {
       type: "http",
       query: ['access_token', 'access_token'],
-      url: `http://${host}:3001/auth/client`
+      url: `http://${host}:3001/auth/client`,
+      clientIdField: "id", // 获取用户id的路径
+      clientLabelField: "label", // 获取用户标签的路径
     },
     httpService: {
       type: "file",

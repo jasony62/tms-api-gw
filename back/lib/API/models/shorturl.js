@@ -17,7 +17,7 @@ class Shorturl extends Base {
   async add(targetUrl, options = {}) {
     const code = this.gen_nanoid()
 
-		const findCodeRst = await this.byCode(code)
+		const findCodeRst = await this.byCode(code, "N")
     if (findCodeRst) {
       await this.add(targetUrl, options = {})
     }
@@ -45,8 +45,13 @@ class Shorturl extends Base {
   /**
    * 
    */
-  async byCode(code) {
-    return this.shortMongoose.findOne({code, state: 1})
+  async byCode(code, single = "Y") {
+    let where = { code }
+    if (single === "Y") {
+      where.state = 1
+    }
+
+    return this.shortMongoose.findOne(where)
   }
 }
 
