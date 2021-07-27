@@ -73,25 +73,62 @@ const OnlyOnceFetch = {
 /* 实现一个时间只取一次*/
 const getMetrics = {
   run: async (host) => {
-    const total = prometheus.metrics.gw_access.total
+    const allTotal = prometheus.metrics.gw_access.total
+    const sendTotal = prometheus.metrics.gw_access.sendTotal
     const failTotal = prometheus.metrics.gw_access.fail
     const successTotal = prometheus.metrics.gw_access.success
-    prometheus.metrics.gw_access.total = 0
-    prometheus.metrics.gw_access.fail = 0
-    prometheus.metrics.gw_access.success = 0
 
-    return [{
+    let metricsDatas = [{
+      client: "all",
       status: "all",
-      total,
+      total: allTotal,
     },
     {
-      status: "fail",
+      client: "all",
+      status: "sendAll",
+      total: sendTotal,
+    },
+    {
+      client: "all",
+      status: "sendFail",
       total: failTotal,
     },
     {
-      status: "success",
+      client: "all",
+      status: "sendSuccess",
       total: successTotal,
     }]
+
+    // 用户
+    const client_gw_access = prometheus.metrics.client_gw_access
+    for (const clientId in client_gw_access) {
+      const data = client_gw_access[clientId]
+      metricsDatas.push({
+        client: clientId,
+        status: "sendAll",
+        total: data.total
+      })
+      metricsDatas.push({
+        client: clientId,
+        status: "sendFail",
+        total: data.fail
+      })
+      metricsDatas.push({
+        client: clientId,
+        status: "sendSuccess",
+        total: data.success
+      })
+      data.total = 0
+      data.fail = 0
+      data.success = 0
+    }
+
+    prometheus.metrics.gw_access.total = 0
+    prometheus.metrics.gw_access.sendTotal = 0
+    prometheus.metrics.gw_access.fail = 0
+    prometheus.metrics.gw_access.success = 0
+
+    return metricsDatas
   },
 }
 
@@ -114,12 +151,12 @@ class ProfileGateway {
     const total = new Counter({
       name: `${prefix}_access_total`,
       help: '当前新增访问量',
-      labelNames: ['status'],
+      labelNames: ['status', "client"],
       registers: [metricsContext.register],
       collect: async () => {
         await getMetrics.run(this).then((result) => {
           result.forEach((nsData) => {
-            total.labels({ status: nsData.status }).inc(nsData.total)
+            total.labels({ status: nsData.status, client: nsData.client }).inc(nsData.total)
           })
         })
         // await OnlyOnceFetch.run(this).then((result) => {

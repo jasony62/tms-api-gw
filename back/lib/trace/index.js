@@ -112,6 +112,9 @@ class Trace {
    * @param {*} req
    */
   async logRecvReq(req, res, ctx) {
+    // 统计数据
+    prometheus.metrics.gw_access.total++
+
     const { method, headers, originUrl: url } = req
     const requestId = headers['x-request-id']
     const recvUrl = _.pick(require('url').parse(url, true), [
@@ -130,6 +133,20 @@ class Trace {
   }
 
   async logSendReq(proxyReq, req, res, options, ctx) {
+    // 统计普罗米修斯数据
+    prometheus.metrics.gw_access.sendTotal++
+    const clientId = req.headers['x-request-client']
+    const client_gw_access = prometheus.metrics.client_gw_access
+    if (client_gw_access[clientId]) {
+      client_gw_access[clientId]["total"]++
+    } else {
+      client_gw_access[clientId] = {
+        total: 1,
+        fail: 0,
+        success: 0
+      }
+    }
+
     const sendUrl = _.pick(options.target, [
       'protocol',
       'hostname',
@@ -137,7 +154,6 @@ class Trace {
       'pathname',
       'query'
     ])
-    const clientId = req.headers['x-request-client']
 
     let recvBody
     if ('POST' == req.method) recvBody = await parseBody(req)
@@ -152,8 +168,15 @@ class Trace {
   }
 
   async logResponse(proxyRes, req, res, ctx) {
-    if (proxyRes.statusCode == 200) prometheus.metrics.gw_access.success++
-    else prometheus.metrics.gw_access.fail++
+    // 统计普罗米修斯数据
+    const clientId = req.headers['x-request-client']
+    if (proxyRes.statusCode == 200) {
+      prometheus.metrics.gw_access.success++ // 总访问量
+      prometheus.metrics.client_gw_access[clientId]["success"]++
+    } else {
+      prometheus.metrics.gw_access.fail++ // 总访问量
+      prometheus.metrics.client_gw_access[clientId]["fail"]++
+    }
 
     let body = []
     proxyRes.on('data', chunk => {

@@ -34,8 +34,6 @@ class Gateway {
     })
     // 启动http服务
     const app = http.createServer(async (req, res) => {
-      // 统计数据
-      prometheus.metrics.gw_access.total++
       // 设置唯一id，便于跟踪
       if (!req.headers['x-request-id']) {
         req.headers['x-request-id'] = uuid()
