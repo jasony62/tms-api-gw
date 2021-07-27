@@ -28,8 +28,12 @@ global.prometheus = {
   metrics: {
     gw_access: {
       total: 0,
+      sendTotal: 0,
       fail: 0,
       success: 0
+    },
+    client_gw_access: {
+
     }
   }
 }

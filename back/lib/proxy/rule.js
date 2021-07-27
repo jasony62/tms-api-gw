@@ -4,30 +4,24 @@
  */
 function HttpProxyRules(ctx) {
   this.rules = ctx.config.proxy.rules
-  this.default = ctx.config.proxy.default || null
   this.API = ctx.API
 
   return this
 }
 
 /**
- * This function will modify the `req` object if a match is found.
- * We also return the new endpoint string if a match is found.
- * @param  {Object} req Takes in a `req` object.
+ * 匹配对应的转发规则
  */
-HttpProxyRules.prototype.match = async function match(req) {
+ HttpProxyRules.prototype.getTargetRules = async function(req) {
   let rules = this.rules
-  let target = this.default
   let path = req.url
-
-  // go through the proxy rules, assuming keys (path prefixes) are ordered
-  // and pick the first target whose path prefix is a prefix of the
-  // request url path. RegExp enabled.
   let pathPrefixRe
   let testPrefixMatch
   let urlPrefix
   let pathEndsWithSlash
   let targetRule
+  let newReqUrl
+  
   for (let pathPrefix in rules) {
     if (!rules.hasOwnProperty(pathPrefix)) continue
     if (pathPrefix[pathPrefix.length - 1] === '/') {
@@ -43,21 +37,10 @@ HttpProxyRules.prototype.match = async function match(req) {
     testPrefixMatch = pathPrefixRe.exec(path)
     if (testPrefixMatch && testPrefixMatch.index === 0) {
       urlPrefix = pathEndsWithSlash ? testPrefixMatch[0] : testPrefixMatch[1]
-      req.url = path.replace(urlPrefix, '')
+      newReqUrl = path.replace(urlPrefix, '')
       targetRule = rules[pathPrefix]
       if (typeof targetRule === "string") {
-        target = targetRule
-        targetRule = { target }
-      } else {
-        target = targetRule.target
-      }
-      // We replace matches on the target,
-      // e.g. /posts/([0-9]+)/comments/([0-9]+) => /posts/$1/comments/$2
-      for (var i = 1; i < testPrefixMatch.length; i++) {
-        target = target.replace(
-          '$' + i,
-          testPrefixMatch[i + (pathEndsWithSlash ? 0 : 1)]
-        )
+        targetRule = { target: targetRule }
       }
       break
     }
@@ -71,17 +54,40 @@ HttpProxyRules.prototype.match = async function match(req) {
       const urlObj = new URL(path, "http://" + req.headers.host)
       targetRule = await this.API.shorturl_decode(urlObj.pathname)
       if (targetRule) {
-        req.url = urlObj.search
-        target = targetRule.target_url
+        targetRule.target = targetRule.target_url
+        newReqUrl = urlObj.search
         urlPrefix = shorturl_prefix
       }
     }
   }
 
-  req.targetRule = targetRule
-  req.urlPrefix = urlPrefix
-  req.originUrl = path
-  req.targetUrl = target + req.url
+  return { targetRule, urlPrefix, originUrl: path, newReqUrl}
+ }
+
+/**
+ * This function will modify the `req` object if a match is found.
+ * We also return the new endpoint string if a match is found.
+ * @param  {Object} req Takes in a `req` object.
+ */
+HttpProxyRules.prototype.match = function match(targetRule, clientLabel = null) {
+  let target = null
+
+  if (Object.prototype.toString.call(targetRule) !== '[object Object]')
+    return target
+
+  if (Array.isArray(targetRule.target)) {
+    for (let tg of targetRule.target) {
+      if (tg.default === true) 
+        target = tg.url
+
+      if (clientLabel && tg.label === clientLabel) {
+        target = tg.url
+        break
+      }
+    }
+  } else if (typeof targetRule.target === "string") {
+    target = targetRule.target
+  }
 
   return target
 }
