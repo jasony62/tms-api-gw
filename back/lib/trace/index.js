@@ -147,7 +147,7 @@ class Trace {
       }
     }
 
-    const sendUrl = _.pick(options.target, [
+    const sendUrl = _.pick(require('url').parse(req.targetUrl, true), [
       'protocol',
       'hostname',
       'port',

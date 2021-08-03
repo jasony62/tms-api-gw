@@ -42,10 +42,13 @@ Config.ins = (function() {
       _ins.transformRequest = transformRequest
     if (pushMessage && (pushMessage.enable === undefined || pushMessage.enable === true))
       _ins.pushMessage = pushMessage
-    if (API && (API.enable === undefined || API.enable === true))
-      _ins.API = API
-    if (API.metrics && (API.metrics.enable === undefined || API.metrics.enable === true))
-      _ins.API.metrics = API.metrics
+    if (API && API.enable === true) {
+      _ins.API = Object.assign({}, API)
+      if (!API.controllers || API.controllers.enable !== true)
+        delete _ins.API.controllers
+      if (!API.metrics || API.metrics.enable !== true)
+        delete _ins.API.metrics
+    }
 
     logger.info('日志服务：', _ins.trace ? '打开' : '否')
     logger.info('配额服务：', _ins.quota ? '打开' : '否')
@@ -53,7 +56,8 @@ Config.ins = (function() {
     logger.info('转换请求服务：', _ins.transformRequest ? '打开' : '否')
     logger.info('消息推送服务：', _ins.pushMessage ? '打开' : '否')
     logger.info('API服务：', _ins.API ? '打开' : '否')
-    logger.info('监控服务：', _ins.API.metrics ? '打开' : '否')
+    logger.info('API-监控服务：', _ins.API && _ins.API.metrics ? '打开' : '否')
+    logger.info('API-接口服务：', _ins.API && _ins.API.controllers ? '打开' : '否')
 
     return _ins
   }
@@ -110,15 +114,21 @@ Context.ins = (function() {
     }
     /* pushMessage */
     if (config.API) {
-      const ctr = require('./API/controllers')
-      const instance = await ctr(ctx, config.API)
-      ctx.API = instance
-    }
-    /* metrics */
-    if (config.API.metrics) {
-      const metrics = require('./API/metrics')
-      const instance = await metrics(ctx, config.API.metrics)
-      ctx.API.metrics = instance
+      ctx.API = {
+        config: config.API
+      }
+      let _instanceCtr, _instanceMtr
+      /* controller */
+      if (config.API.controllers) {
+        const ctr = require('./API/controllers')
+        ctx.API.controllers = await ctr(ctx, config.API.controllers, config.API.router)
+      }
+
+      /* metrics */
+      if (config.API.metrics) {
+        const metrics = require('./API/metrics')
+        ctx.API.metrics = await metrics(ctx, config.API.metrics)
+      }
     }
 
     return ctx

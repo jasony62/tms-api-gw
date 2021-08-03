@@ -80,7 +80,7 @@ module.exports = {
       query: process.env.TMS_AUTH_HTTP_QUERY ? JSON.parse(process.env.TMS_AUTH_HTTP_QUERY) : ['access_token', 'access_token'],
       url: process.env.TMS_AUTH_HTTP_URL || "http://localhost/auth/token",
       clientIdField: process.env.TMS_AUTH_HTTP_CLIENTIDFIELD || "id",
-      clientLabelField: process.env.TMS_AUTH_HTTP_CLIENTLABELFIELD || "label",
+      clientLabelField: process.env.TMS_AUTH_HTTP_CLIENTLABELFIELD || null,
     },
     httpPortal: {
       type: "file",
@@ -112,16 +112,8 @@ module.exports = {
     }
   },
   API: {
-    enable: process.env.TMS_CONTROLLER_ENABLE === "true" ? true : false,
+    enable: process.env.TMS_API_ENABLE === "true" ? true : false,
     port: ctrlPort,
-    mongodb: {
-      host: process.env.TMS_CTRL_MONGODB_HOST || host,
-      port: parseInt(process.env.TMS_CTRL_MONGODB_PORT) || 27017,
-      database: process.env.TMS_CTRL_MONGODB_DATABASE || 'tms-api-gw-jh',
-      user: process.env.TMS_CTRL_MONGODB_USER || false,
-      password: process.env.TMS_CTRL_MONGODB_PASSWORD || false,
-      maxPoolSize: parseInt(process.env.TMS_CTRL_MONGODB_MAXPOOLSIZE) || 100,
-    },
     router: {
       controllers: {
         prefix: process.env.TMS_APP_ROUTER_CONTROLLER || "" // 接口调用url的前缀
@@ -130,9 +122,20 @@ module.exports = {
         prefix: process.env.TMS_METRICS_ROUTER_PREFIX || "/metrics" // metrics url的前缀
       },
     },
-    shorturl: {
-      host: process.env.TMS_APP_SHORTURL_HOST || "http://localhost",
-      prefix: process.env.TMS_APP_SHORTURL_PREFIX || "/s"
+    controllers: {
+      enable: process.env.TMS_CONTROLLER_ENABLE === "true" ? true : false,
+      mongodb: {
+        host: process.env.TMS_CTRL_MONGODB_HOST || host,
+        port: parseInt(process.env.TMS_CTRL_MONGODB_PORT) || 27017,
+        database: process.env.TMS_CTRL_MONGODB_DATABASE || 'tms-api-gw-jh',
+        user: process.env.TMS_CTRL_MONGODB_USER || false,
+        password: process.env.TMS_CTRL_MONGODB_PASSWORD || false,
+        maxPoolSize: parseInt(process.env.TMS_CTRL_MONGODB_MAXPOOLSIZE) || 100,
+      },
+      shorturl: {
+        host: process.env.TMS_APP_SHORTURL_HOST || "http://localhost",
+        prefix: process.env.TMS_APP_SHORTURL_PREFIX || "/s"
+      }
     },
     metrics: {
       enable: process.env.TMS_METRICS_ENABLE === "true" ? true : false,

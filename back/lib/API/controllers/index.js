@@ -8,9 +8,10 @@ const { ResultFault, ResultObjectNotFound } = require('./response')
  * 
  */
 class Wrapper {
-  constructor(context, config) {
+  constructor(context, config, router) {
     this.context = context
     this.config = config
+    this.router = router
   }
   /**
    * 
@@ -41,7 +42,7 @@ class Wrapper {
    * @returns 
    */
   findCtrlClassAndMethodName(request) {
-    const prefix = _.get(this.config, "router.controllers.prefix", "")
+    const prefix = _.get(this.router, "router.controllers.prefix", "")
     let { path } = request
     if (prefix) {
       if (path.indexOf(prefix) !== 0) {
@@ -174,15 +175,15 @@ function getMongodbModel(mongoose) {
   return { shorturlSchema }
 }
 
-module.exports = async function(ctx, config) {
+module.exports = async function(ctx, config, router) {
   //
   let context = {}
-  if (config.mongodb) {
-    const MongoContext = require('../../mongo')
-    const mongo = await MongoContext.ins(config.mongodb)
-    context.MongooseContextCtrl = getMongodbModel(mongo.mongoose)
-  }
-  const wrapper = new Wrapper(context, config)
+
+  const MongoContext = require('../../mongo')
+  const mongo = await MongoContext.ins(config.mongodb)
+  context.MongooseContextCtrl = getMongodbModel(mongo.mongoose)
+
+  const wrapper = new Wrapper(context, config, router)
   
   return wrapper
 }
