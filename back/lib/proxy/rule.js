@@ -47,12 +47,12 @@ function HttpProxyRules(ctx) {
   }
 
   // 短链接 
-  if (!targetRule && this.API) {
-    const { prefix: shorturl_prefix, host: shorturl_host } = this.API.config.shorturl
+  if (!targetRule && this.API && this.API.controllers) {
+    const { prefix: shorturl_prefix, host: shorturl_host } = this.API.controllers.config.shorturl
     let url = path.substring(0, path.lastIndexOf("/"))
     if (url === shorturl_prefix) {
       const urlObj = new URL(path, "http://" + req.headers.host)
-      targetRule = await this.API.shorturl_decode(urlObj.pathname)
+      targetRule = await this.API.controllers.shorturl_decode(urlObj.pathname)
       if (targetRule) {
         targetRule.target = targetRule.target_url
         newReqUrl = urlObj.search

@@ -126,9 +126,9 @@ class Gateway {
       return 
     }
     const APIContent = this.ctx.API
-    const ctrConfig = APIContent.config
-    const metricsPrefix = _.get(ctrConfig, "router.metrics.prefix", null)
-    const ctrPrefix = _.get(ctrConfig, "router.controllers.prefix", null)
+    const APIConfig = APIContent.config
+    const metricsPrefix = _.get(APIConfig, "router.metrics.prefix", null)
+    const ctrPrefix = _.get(APIConfig, "router.controllers.prefix", null)
 
     const parseBody = (req) => {
       return new Promise((resolve, reject) => {
@@ -161,7 +161,12 @@ class Gateway {
           return res.end('未开启监控服务')
         }
       } else if (ctrPrefix !== null && req.path.indexOf(ctrPrefix) === 0) {
-        await APIContent.fnCtrl(req, res)
+        if (!APIContent.controllers) {
+          res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })
+          return res.end('未开启接口服务')
+        }
+
+        await APIContent.controllers.fnCtrl(req, res)
 
         if (!res.hasHeader('Content-Type')) res.setHeader("Content-Type", "application/json;charset=utf-8")
         if (!res.body) res.body = ""
@@ -173,7 +178,7 @@ class Gateway {
       }
     })
 
-    let ctrlPort = ctrConfig.port
+    let ctrlPort = APIConfig.port
     app.listen(ctrlPort, () => {
       logger.info('Tms Api Gateway-controller is runing at %d', ctrlPort)
     })

@@ -79,7 +79,7 @@ module.exports = {
       query: ['access_token', 'access_token'],
       url: `http://${host}:3001/auth/client`,
       clientIdField: "id", // 获取用户id的路径
-      clientLabelField: "label", // 获取用户标签的路径
+      clientLabelField: null, // 获取用户标签的路径
     },
     httpService: {
       type: "file",
@@ -106,13 +106,6 @@ module.exports = {
   API: {
     enable: true,
     port: ctrlPort,
-    mongodb: {
-      host: host,
-      port: 27017,
-      database: 'tms-api-gw',
-      user: false,
-      password: false,
-    },
     router: {
       controllers: {
         prefix: "" // 接口调用url的前缀
@@ -121,12 +114,22 @@ module.exports = {
         prefix: "/metrics" // metrics url的前缀
       },
     },
-    shorturl: {
-      host: "http://localhost",
-      prefix: "/s"
+    controllers: {
+      enable: false,
+      mongodb: {
+        host: host,
+        port: 27017,
+        database: 'tms-api-gw',
+        user: false,
+        password: false,
+      },
+      shorturl: {
+        host: "http://localhost",
+        prefix: "/s"
+      }
     },
     metrics: {
-      enable: true,
+      enable: false,
       collectDefault: true, // 是否包含默认系统监控指标
       gatewayProfile: {
         prefix: 'tms_api_gw', // 指标前缀
