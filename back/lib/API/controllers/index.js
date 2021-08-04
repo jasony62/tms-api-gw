@@ -42,7 +42,7 @@ class Wrapper {
    * @returns 
    */
   findCtrlClassAndMethodName(request) {
-    const prefix = _.get(this.router, "router.controllers.prefix", "")
+    const prefix = _.get(this.router, "controllers.prefix", "")
     let { path } = request
     if (prefix) {
       if (path.indexOf(prefix) !== 0) {
