@@ -2,7 +2,7 @@ const log4js = require('@log4js-node/log4js-api')
 const logger = log4js.getLogger('tms-api-gw_idx')
 const ProxyRules = require('./proxy/rule')
 const uuid = require('uuid')
-const Context = require('./context')
+const { Context } = require('./context')
 const http = require('http')
 const _ = require("lodash")
 
@@ -153,20 +153,20 @@ class Gateway {
       }
 
       if (metricsPrefix !== null && req.path.indexOf(metricsPrefix) === 0) {
-        if (APIContent.metrics) {
-          const metrics = await APIContent.metrics.register.metrics()
-          return res.end(metrics)
-        } else {
+        if (!this.ctx.API || !this.ctx.API.metrics) { // 需要检查热更新时是否是否关闭API，所以需要用this.ctx.API
           res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })
           return res.end('未开启监控服务')
         }
+
+        const metrics = await this.ctx.API.metrics.register.metrics()
+        return res.end(metrics)
       } else if (ctrPrefix !== null && req.path.indexOf(ctrPrefix) === 0) {
-        if (!APIContent.controllers) {
+        if (!this.ctx.API || !this.ctx.API.controllers) { // 需要检查热更新时是否是否关闭API，所以需要用this.ctx.API
           res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })
           return res.end('未开启接口服务')
         }
 
-        await APIContent.controllers.fnCtrl(req, res)
+        await this.ctx.API.controllers.fnCtrl(req, res)
 
         if (!res.hasHeader('Content-Type')) res.setHeader("Content-Type", "application/json;charset=utf-8")
         if (!res.body) res.body = ""

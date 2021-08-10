@@ -3,8 +3,8 @@
  * @param {Object} ctx Takes in a `rules` obj, (optional) `default` target
  */
 function HttpProxyRules(ctx) {
-  this.rules = ctx.config.proxy.rules
-  this.API = ctx.API
+  this.ctx = ctx
+  this.proxy = ctx.config.proxy
 
   return this
 }
@@ -13,7 +13,7 @@ function HttpProxyRules(ctx) {
  * 匹配对应的转发规则
  */
  HttpProxyRules.prototype.getTargetRules = async function(req) {
-  let rules = this.rules
+  let rules = this.proxy.rules
   let path = req.url
   let pathPrefixRe
   let testPrefixMatch
@@ -47,12 +47,12 @@ function HttpProxyRules(ctx) {
   }
 
   // 短链接 
-  if (!targetRule && this.API && this.API.controllers) {
-    const { prefix: shorturl_prefix, host: shorturl_host } = this.API.controllers.config.shorturl
+  if (!targetRule && this.ctx.API && this.ctx.API.controllers) {
+    const { prefix: shorturl_prefix, host: shorturl_host } = this.ctx.API.controllers.config.shorturl
     let url = path.substring(0, path.lastIndexOf("/"))
     if (url === shorturl_prefix) {
       const urlObj = new URL(path, "http://" + req.headers.host)
-      targetRule = await this.API.controllers.shorturl_decode(urlObj.pathname)
+      targetRule = await this.ctx.API.controllers.shorturl_decode(urlObj.pathname)
       if (targetRule) {
         targetRule.target = targetRule.target_url
         newReqUrl = urlObj.search
