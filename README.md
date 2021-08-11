@@ -14,7 +14,7 @@ tms-api-gw 是一个 api 网关，可以通过设置规则将外部 http 请求�
 
 # 业务规则
 
-在 config 目录下新建 gateway.js 文件，参考 gateway.sample.js 文件进行设置。
+在 config 目录下新建 gateway.js 文件，参考 gateway.sample.js 文件进行设置，gateway.local.js 为本地配置文件，其中的参数会覆盖gateway.js。
 
 ## 路由规则（proxy.rules）
 
@@ -26,8 +26,9 @@ let proxyRules = new HttpProxyRules({
     '.*/test2/': 'http://localhost:8080/cool2/', // Rule (2)
     '/posts/([0-9]+)/comments/([0-9]+)': 'http://localhost:8080/p/$1/c/$2', // Rule (3)
     '/author/([0-9]+)/posts/([0-9]+)/': 'http://localhost:8080/a/$1/p/$2/' // Rule (4)
-  },
-  default: 'http://localhost:8080' // default target
+    '/test3': {"target":"http://localhost/c2/d2","auth":["***"],"trace":["***"],"transformRequest":["***"]} // Rule (5)
+    '/test2': [{"url":"http://localhost/c/d","label":"trial","default":true},{"url":"http://localhost/c2/d2","label":"official"}] // Rule (6)
+  }
 })
 ```
 
@@ -65,7 +66,34 @@ let proxyRules = new HttpProxyRules({
 | counter_day     | 记录用户（clientId）最后一次（latestAt）调用某 api 时，所在分（minute），小时（hour）和天（day）的累计调用次数。一个 clientId 和 api 的组合只记录 1 条数据。 |
 | counter_archive | 记录用户（clientId）在某年（year），某月（month），某日（day）的调用某 api 的累计次数。一个 clientId 和 api 的组合在每次发生调用的天产生 1 条数据。          |
 
-配额控制功能暂未实现
+配额控制功能
+```
+quota: {
+  enable: true,
+  mongodb: {
+    host,
+    port: 27017,
+    database: 'tms-api-gw'
+  },
+  rule: { // 配额规则
+    rateLimit: { // 限制访问次数
+      minute: { // 按分钟
+        limit: 100 // 每分钟最多100次
+      }
+    }
+  },
+  rule2: "./lib/quota/test.js", // 支持加载自定义文件
+  default: [] // 设置默认，没有则没有配额限制
+}
+```
+##  API 服务
+
+tms-api-gw 管理端，需要另起端口，支持自定义接口，以及为Prometheus提供指标
+
+# 配置文件热更新
+
+如果需要更新配置文件但不想重启服务，可以通过更改gateway.js 或 gateway.local.js ，然后调用API http://localhost:3457/admin/hotUpdate/config
+即可。（需开启API服务、API-接口服务。暂支持转发规则的修改，以及认证、配额、日志登服务的关闭操作）
 
 # 运行示例
 
