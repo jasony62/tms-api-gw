@@ -165,7 +165,9 @@ function getMongodbModel(mongoose) {
       quota: { type: Object, default: null},
       transformRequest: { type: Object, default: null},
       createAt: { type: Date },
-      count: { type: Number, default: 0 }
+      updateAt: { type: Date },
+      count: { type: Number, default: 0 },
+      expiration: { type: Number, default: 0 }
     },
     { collection: 'short_url' }
   )
