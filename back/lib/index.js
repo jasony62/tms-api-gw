@@ -22,7 +22,8 @@ class Gateway {
     // 异常事件不处理
     proxy.on('error', (err, req, res) => {
       this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "error", err)
-      res.end()
+      res.writeHead(502, { 'Content-Type': 'text/plain; charset=utf-8' })
+      res.end(err.toString())
     })
     // 准备发送请求
     proxy.on('proxyReq', async (proxyReq, req, res, options) => {
@@ -154,7 +155,7 @@ class Gateway {
 
       if (metricsPrefix !== null && req.path.indexOf(metricsPrefix) === 0) {
         if (!this.ctx.API || !this.ctx.API.metrics) { // 需要检查热更新时是否是否关闭API，所以需要用this.ctx.API
-          res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })
+          res.writeHead(503, { 'Content-Type': 'text/plain; charset=utf-8' })
           return res.end('未开启监控服务')
         }
 
@@ -162,7 +163,7 @@ class Gateway {
         return res.end(metrics)
       } else if (ctrPrefix !== null && req.path.indexOf(ctrPrefix) === 0) {
         if (!this.ctx.API || !this.ctx.API.controllers) { // 需要检查热更新时是否是否关闭API，所以需要用this.ctx.API
-          res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })
+          res.writeHead(503, { 'Content-Type': 'text/plain; charset=utf-8' })
           return res.end('未开启接口服务')
         }
 
@@ -173,8 +174,8 @@ class Gateway {
         if (typeof res.body !== "string") res.body = JSON.stringify(res.body)
         return res.end(res.body)
       } else {
-        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })
-        return res.end('未找到指定路径')
+        res.writeHead(503, { 'Content-Type': 'text/plain; charset=utf-8' })
+        return res.end('未支持的服务')
       }
     })
 
