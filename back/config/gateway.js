@@ -143,6 +143,7 @@ module.exports = {
       gatewayProfile: {
         prefix: process.env.TMS_METRICS_GWPROFILE_PREFIX || 'tms_api_gw', // 指标前缀
       },
+      slowQueryTimeout: process.env.TMS_METRICS_SLOWQUERYTIMEOUT || 1000, // 记录慢接口
     }
   },
 }
