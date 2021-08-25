@@ -29,13 +29,15 @@ global.prometheus = {
     gw_access: { // 接口访问情况
       total: 0,
       sendTotal: 0,
-      fail: 0,
-      success: 0
+      sendFail: 0,
+      sendSuccess: 0,
+      sendError: 0,
+      slow: 0,
     },
-    client_gw_access: { // 客户访问情况
+    client_access: { // 客户 维度
 
     },
-    slowQuery: { // 缓慢的接口
+    api_access: { // api 维度
 
     }
   }

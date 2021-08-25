@@ -48,7 +48,7 @@ async function _pushMessage(targetTc, ctx, req, event, pushUrl, datas, oHeaders 
   }
 
   if (ctx.pushMessage) {
-    ctx.pushMessage.publish({ 
+    await ctx.pushMessage.publish({ 
       event, 
       pushUrl,
       requestId, 
@@ -74,7 +74,7 @@ async function _eventTrace(req, ctx, TraceObj, event, datas, options = {}) {
           continue
       if (targetTc.type === "mongodb") {
         if (event === "recvReq") {
-          targetTc.mongoose.create(
+          await targetTc.mongoose.create(
             datas,
             err => {
               if (err) logger.error(`TraceLog.create || ${req.headers['x-request-id']} || ${req.originUrl} || ${new Date() * 1 - req.headers['x-request-at']}`, err)
@@ -82,14 +82,14 @@ async function _eventTrace(req, ctx, TraceObj, event, datas, options = {}) {
           )
         } else if (event === "response") {
           if (targetTc.onlyError === true && options.proxyRes.statusCode === 200) { // 只在发生错误时获取body数据
-            targetTc.mongoose.updateOne( { requestId }, { $set: datas } )
+            await targetTc.mongoose.updateOne( { requestId }, { $set: datas } )
           } else {
             const rstBody = await options.getResBody.get(options.proxyRes)
             datas.responseBody = rstBody
-            targetTc.mongoose.updateOne( { requestId }, { $set: datas } )
+            await targetTc.mongoose.updateOne( { requestId }, { $set: datas } )
           }
         } else {
-          targetTc.mongoose.updateOne( { requestId }, { $set: datas } )
+          await targetTc.mongoose.updateOne( { requestId }, { $set: datas } )
         }
       } else if (targetTc.type === "http") {
         if (event === "response") {
@@ -103,7 +103,7 @@ async function _eventTrace(req, ctx, TraceObj, event, datas, options = {}) {
             delete datas.responseBody
           }
         }
-        _pushMessage(targetTc, ctx, req, event, targetTc.url, datas)
+        await _pushMessage(targetTc, ctx, req, event, targetTc.url, datas)
       }
     }
   }
@@ -125,9 +125,6 @@ class Trace {
    * @param {*} req
    */
   async logRecvReq(req, res, ctx) {
-    // 统计数据
-    prometheus.metrics.gw_access.total++
-
     const { method, headers, originUrl: url } = req
     const requestId = headers['x-request-id']
     const recvUrl = _.pick(require('url').parse(url, true), [
@@ -146,20 +143,6 @@ class Trace {
   }
 
   async logSendReq(proxyReq, req, res, options, ctx) {
-    // 统计普罗米修斯数据
-    prometheus.metrics.gw_access.sendTotal++
-    const clientId = req.headers['x-request-client']
-    const client_gw_access = prometheus.metrics.client_gw_access
-    if (client_gw_access[clientId]) {
-      client_gw_access[clientId]["total"]++
-    } else {
-      client_gw_access[clientId] = {
-        total: 1,
-        fail: 0,
-        success: 0
-      }
-    }
-
     const sendUrl = _.pick(require('url').parse(req.targetUrl, true), [
       'protocol',
       'hostname',
@@ -181,16 +164,6 @@ class Trace {
   }
 
   async logResponse(proxyRes, req, res, ctx) {
-    // 统计普罗米修斯数据
-    const clientId = req.headers['x-request-client']
-    if (proxyRes.statusCode == 200) {
-      prometheus.metrics.gw_access.success++ // 总访问量
-      prometheus.metrics.client_gw_access[clientId]["success"]++
-    } else {
-      prometheus.metrics.gw_access.fail++ // 总访问量
-      prometheus.metrics.client_gw_access[clientId]["fail"]++
-    }
-
     const current = new Date() * 1
     const requestAt = req.headers['x-request-at']
     const res_elapseMs = current - requestAt
