@@ -134,6 +134,7 @@ module.exports = {
       gatewayProfile: {
         prefix: 'tms_api_gw', // 指标前缀
       },
+      slowQueryTimeout: process.env.TMS_METRICS_SLOWQUERYTIMEOUT || 1000, // 耗时1000毫秒后记为慢接口
     }
   },
 }

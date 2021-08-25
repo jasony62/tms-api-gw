@@ -48,7 +48,7 @@ async function _pushMessage(targetTc, ctx, req, event, pushUrl, datas, oHeaders 
   }
 
   if (ctx.pushMessage) {
-    ctx.pushMessage.publish({ 
+    await ctx.pushMessage.publish({ 
       event, 
       pushUrl,
       requestId, 
@@ -74,23 +74,36 @@ async function _eventTrace(req, ctx, TraceObj, event, datas, options = {}) {
           continue
       if (targetTc.type === "mongodb") {
         if (event === "recvReq") {
-          targetTc.mongoose.create(
+          await targetTc.mongoose.create(
             datas,
             err => {
               if (err) logger.error(`TraceLog.create || ${req.headers['x-request-id']} || ${req.originUrl} || ${new Date() * 1 - req.headers['x-request-at']}`, err)
             }
           )
-        } else {
-          if (event === "response" && targetTc.onlyError === true && options.proxyRes.statusCode === 200) { // 只记录错误日志
-            continue
+        } else if (event === "response") {
+          if (targetTc.onlyError === true && options.proxyRes.statusCode === 200) { // 只在发生错误时获取body数据
+            await targetTc.mongoose.updateOne( { requestId }, { $set: datas } )
+          } else {
+            const rstBody = await options.getResBody.get(options.proxyRes)
+            datas.responseBody = rstBody
+            await targetTc.mongoose.updateOne( { requestId }, { $set: datas } )
           }
-          targetTc.mongoose.updateOne( { requestId }, { $set: datas } ).then( r => r )
+        } else {
+          await targetTc.mongoose.updateOne( { requestId }, { $set: datas } )
         }
       } else if (targetTc.type === "http") {
-        if (event === "response" && targetTc.onlyError === true && options.proxyRes.statusCode === 200) { // 只记录错误日志
-          continue
+        if (event === "response") {
+          if (targetTc.sendOnlyError === true && options.proxyRes.statusCode === 200) { // 只发送错误日志
+            continue
+          }
+          if (targetTc.onlyError !== true || (targetTc.onlyError === true && options.proxyRes.statusCode !== 200)) {  // 只在发生错误时获取body数据
+            const rstBody = await options.getResBody.get(options.proxyRes)
+            datas.responseBody = rstBody
+          } else {
+            delete datas.responseBody
+          }
         }
-        _pushMessage(targetTc, ctx, req, event, targetTc.url, datas)
+        await _pushMessage(targetTc, ctx, req, event, targetTc.url, datas)
       }
     }
   }
@@ -112,9 +125,6 @@ class Trace {
    * @param {*} req
    */
   async logRecvReq(req, res, ctx) {
-    // 统计数据
-    prometheus.metrics.gw_access.total++
-
     const { method, headers, originUrl: url } = req
     const requestId = headers['x-request-id']
     const recvUrl = _.pick(require('url').parse(url, true), [
@@ -133,20 +143,6 @@ class Trace {
   }
 
   async logSendReq(proxyReq, req, res, options, ctx) {
-    // 统计普罗米修斯数据
-    prometheus.metrics.gw_access.sendTotal++
-    const clientId = req.headers['x-request-client']
-    const client_gw_access = prometheus.metrics.client_gw_access
-    if (client_gw_access[clientId]) {
-      client_gw_access[clientId]["total"]++
-    } else {
-      client_gw_access[clientId] = {
-        total: 1,
-        fail: 0,
-        success: 0
-      }
-    }
-
     const sendUrl = _.pick(require('url').parse(req.targetUrl, true), [
       'protocol',
       'hostname',
@@ -163,42 +159,43 @@ class Trace {
 
     _eventTrace(req, ctx, this, "sendReq", datas)
 
-    logger.debug(`logSendReq || ${req.headers['x-request-id']} || ${req.originUrl} || ${new Date() * 1 - req.headers['x-request-at']}`)
+    logger.debug(`logSendReq || ${req.headers['x-request-id']} || ${req.originUrl} || ${send_elapseMs}`)
     return 
   }
 
   async logResponse(proxyRes, req, res, ctx) {
-    // 统计普罗米修斯数据
-    const clientId = req.headers['x-request-client']
-    if (proxyRes.statusCode == 200) {
-      prometheus.metrics.gw_access.success++ // 总访问量
-      prometheus.metrics.client_gw_access[clientId]["success"]++
-    } else {
-      prometheus.metrics.gw_access.fail++ // 总访问量
-      prometheus.metrics.client_gw_access[clientId]["fail"]++
+    const current = new Date() * 1
+    const requestAt = req.headers['x-request-at']
+    const res_elapseMs = current - requestAt
+    const { statusCode, statusMessage, headers } = proxyRes
+    const datas = {
+      statusCode,
+      statusMessage,
+      responseHeaders: headers,
+      res_elapseMs,
+      responseAt: current
     }
 
-    let body = []
-    proxyRes.on('data', chunk => {
-      body.push(chunk)
-    })
-    proxyRes.on('end', async () => {
-      body = Buffer.concat(body).toString()
-      const current = new Date() * 1
-      const requestAt = req.headers['x-request-at']
-      const res_elapseMs = current - requestAt
-      const { statusCode, statusMessage, headers } = proxyRes
-      const datas = {
-        statusCode,
-        statusMessage,
-        responseHeaders: headers,
-        responseBody: body,
-        res_elapseMs,
-        responseAt: current
+    const getResBody = {
+      body: null,
+      get: async function(proxyRes2) {
+        if (this.body !== null) return this.body
+        return new Promise((resolve, reject) => {
+          let rst = []
+          proxyRes2.on('data', chunk => {
+            rst.push(chunk)
+          })
+          proxyRes2.on('end', async () => {
+            rst = Buffer.concat(rst).toString()
+            this.body = rst
+            return resolve(this.body)
+          })
+        })
       }
-      _eventTrace(req, ctx, this, "response", datas, { proxyRes: { statusCode, statusMessage, headers } })
-      logger.debug(`logResponse || ${req.headers['x-request-id']} || ${req.originUrl} || ${new Date() * 1 - req.headers['x-request-at']}`)
-    })
+    }
+
+    _eventTrace(req, ctx, this, "response", datas, { proxyRes, getResBody })
+    logger.debug(`logResponse || ${req.headers['x-request-id']} || ${req.originUrl} || ${res_elapseMs}`)
   }
 
   async logCheckpointReq(req, res, ctx, type, error = "") {

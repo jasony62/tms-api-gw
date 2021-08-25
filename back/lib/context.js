@@ -5,7 +5,34 @@ const EventEmitter = require('events')
 const log4js = require('@log4js-node/log4js-api')
 const logger = log4js.getLogger('tms-api-gw_ctx')
 
-class GatewayEmitter extends EventEmitter {}
+/**
+ * 获得配置数据
+ */
+function loadConfig(name, defaultConfig, reload = "N") {
+  let basepath = path.resolve('config', `${name}.js`)
+  let baseConfig
+  if (fs.existsSync(basepath)) {
+    if (reload === "Y") delete require.cache[basepath]
+    baseConfig = require(basepath)
+    logger.info(`从[${basepath}]加载配置`)
+  } else {
+    logger.warn(`[${name}]配置文件[${basepath}]不存在`)
+  }
+  let localpath = path.resolve('config', `${name}.local.js`)
+  let localConfig
+  if (fs.existsSync(localpath)) {
+    if (reload === "Y") delete require.cache[localpath]
+    localConfig = require(localpath)
+    logger.info(`从[${localpath}]加载本地配置`)
+  }
+  if (defaultConfig || baseConfig || localConfig) {
+    return _.merge({}, defaultConfig, baseConfig, localConfig)
+  }
+
+  return false
+}
+
+class GatewayEmitter extends EventEmitter { }
 
 class ConfigError extends Error {
   constructor(msg) {
@@ -19,18 +46,11 @@ class Config {
     this.proxy = proxy
   }
 }
-Config.ins = (function() {
+Config.ins = (function () {
   let _ins
-  return async function() {
-    if (_ins) return _ins
-    const filename = path.resolve('config/gateway.js')
-    if (!fs.existsSync(filename)) {
-      const msg = `配置文件'${filename}'不存在`
-      logger.error(msg)
-      return Promise.reject(new ConfigError(msg))
-    }
-
-    const { port, proxy, trace, quota, auth, transformRequest, pushMessage, API } = require(filename)
+  return async function (reload = "N") {
+    if (_ins && reload === "N") return _ins
+    const { port, proxy, trace, quota, auth, transformRequest, pushMessage, API } = loadConfig("gateway", {}, "Y")
     _ins = new Config(port, proxy)
     if (trace && (trace.enable === undefined || trace.enable === true))
       _ins.trace = trace
@@ -112,7 +132,7 @@ Context.ins = (function() {
       const instance = await pushMsg(ctx.emitter, config.pushMessage)
       ctx.pushMessage = instance
     }
-    /* pushMessage */
+    /* API */
     if (config.API) {
       ctx.API = {
         config: config.API
@@ -134,5 +154,50 @@ Context.ins = (function() {
     return ctx
   }
 })()
+Context.hotUpdate = async function() {
+  const ctx = await Context.ins()
+  const config = await Config.ins("Y")
 
-module.exports = Context
+  /* proxy */
+  ctx.config.proxy.rules = config.proxy.rules
+  /* trace */
+  if (!config.trace && ctx.trace) {
+    delete ctx.config.trace
+    delete ctx.trace
+  }
+  /* quota */
+  if (!config.quota && ctx.quota) {
+    delete ctx.config.quota
+    delete ctx.quota
+  }
+  /* auth */
+  if (!config.auth && ctx.auth) {
+    delete ctx.config.auth
+    delete ctx.auth
+  }
+  /* transformRequest */
+  if (!config.transformRequest && ctx.transformRequest) {
+    delete ctx.config.transformRequest
+    delete ctx.transformRequest
+  }
+  /* pushMessage */
+  if (!config.pushMessage && ctx.pushMessage) {
+    delete ctx.config.pushMessage
+    delete ctx.pushMessage
+  }
+  /* API */
+  if (!config.API && ctx.API) {
+    delete ctx.config.API
+    delete ctx.API
+  } else if (config.API && ctx.API && !config.API.controllers && ctx.API.controllers) {
+    delete ctx.config.controllers
+    delete ctx.API.controllers
+  } else if (config.API && ctx.API && !config.API.metrics && ctx.API.metrics) {
+    delete ctx.config.metrics
+    delete ctx.API.metrics
+  }
+
+  return ctx
+}
+
+module.exports = { Context, Config, loadConfig }
