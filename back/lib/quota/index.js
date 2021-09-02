@@ -190,7 +190,7 @@ module.exports = (function() {
   return function(emitter, mongoose, config) {
     if (_instance) return _instance
 
-    const { default: defaultQuota, ...rules } = config
+    const { default: defaultQuota, enable, mongodb, ...rules } = config
     let ModelDay = Quota.createModelDay(mongoose)
     let ModelArchive = Quota.createModelArchive(mongoose)
 
