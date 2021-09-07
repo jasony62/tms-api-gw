@@ -21,10 +21,9 @@ class HttpTransformReq {
   /**
    * 
    * @param {*} req 
-   * @param {*} target 
    * @returns 
    */
-  async check(clientId, req, target) {
+  async check(clientId, req) {
     const targetTransforms = this.getTargetAuth(req.targetRule)
     for (const t of targetTransforms) {
       const tarArf = this.transformInstanceMap.get(t)
@@ -38,11 +37,11 @@ class HttpTransformReq {
         func = tarArf
       }
       if (typeof func === "function") {
-        const rst = await func(clientId, req, target)
-        return {
-          target: rst.target || "",
-          headers: rst.headers || "",
+        const rst = await func(clientId, req)
+        if (Object.prototype.toString.call(rst) !== '[object Object]') {
+          return Promise.reject({msg: "请求拦截器 返回的不是一个object"})
         }
+        return rst
       }
     }
     return {}

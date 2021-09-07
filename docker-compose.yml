@@ -9,48 +9,78 @@ services:
     image: api-gw/back:latest
     container_name: jh-back
     #environment:
-      #
-      # - TMS_APP_PORT=6789
-      # 转发规则 crm调it模块接口
-      # - TMS_PROXY_RULES={"/interact-gateway/api/recv/orderBack_fk": "http://localhost:3730/it/api/recv/orderBack?domain=fk", "/interact-gateway/api/recv/orderBack_crm": "http://localhost:3730/it/api/recv/orderBack?domain=crm"}
-      # mongo
-      # - TMS_TRACE_MONGODB_USER=admin
-      # - TMS_TRACE_MONGODB_PASSWORD=password
-      # - TMS_TRACE_MONGODB_HOST=127.0.0.1
-      # - TMS_TRACE_MONGODB_PORT=27018
-      # - TMS_TRACE_MONGODB_DATABASE=tms_api_gw
-      # - TMS_QUOTA_MONGODB_USER=admin
-      # - TMS_QUOTA_MONGODB_PASSWORD=password
-      # - TMS_QUOTA_MONGODB_HOST=127.0.0.1
-      # - TMS_QUOTA_MONGODB_PORT=27018
-      # - TMS_QUOTA_MONGODB_DATABASE=tms_api_gw
-      # 是否记录访问统计
-      # - TMS_QUOTA_ENABLE=true
+      # 网关端口号
+      ## - TMS_APP_PORT=6789
+      # 转发规则 
+      ### auth 鉴权 ["http","httpPortal","httpService","httpYz","noauth"] 默认 ["http"]
+      ####   http 默认方式 去 TMS_AUTH_HTTP_URL 地址里去校验token 失败时返回statusCode: 401 body: 没有找到和access_token匹配的数据（text/plain; charset=utf-8）除了鉴权以外，还会判断客户账号上的标签，并用标签进行分流。标签取值地方由 TMS_AUTH_HTTP_CLIENTLABELFIELD 变量决定
+      ####   httpPortal 用于门户网关 与 http 的区别是发生失败时返回 statusCode: 200 body: {"msg": "没有找到和access_token匹配的数据","code": 20001} (application/json; charset=utf-8)
+      ####   httpService  用于服务商网关 与 http 的区别是，鉴权时除了校验token是否正确外，还需要校验 客户角色id是否是 16 或 APP_SERVICEAUTHRID 所配置的角色id
+      ####   httpYz  与 http 的区别在于，获取access_token的方式，http 仅能在get参数中获取，httpYz 支持在header["authorization"]中解析。 除了鉴权以外，还会判断客户账号上的标签，并用标签进行分流。标签取值地方由 TMS_AUTH_HTTP_CLIENTLABELFIELD 变量决定
+      ####   noauth 跳过鉴权返回空白信息
+      ### trace 日志 储存方式 ["mongodb","mongodb_callticket","http"] 默认["mongodb"]
+      ####   mongodb  存在配置的mongodb库中、是否只储response存错误日志、储存什么事件的错误日志均可配置（TMS_TRACE_MONGO_EVENTS，TMS_TRACE_ENABLE_ONLYERROR）
+      ####   mongodb_callticket  也会将配置文件储存在mongodb库中，储存所有事件的response错误日志
+      ####   http   会将指定事件（TMS_TRACE_SEND_EVENTS）的日志发往指定第三方接口（TMS_TRACE_SEND_URL）
+      ### quota 配额限制 ["rule_all"] 默认 []
+      ####   rule_all  每个接口每分钟的调用次数大于 TMS_QUOTA_RATELIMIT_MINUTE 时会返回 statusCode 403 body：api 执行流量控制，限制次数为[4]，周期为[分]，当前次数 大于 4
+      ### transformRequest 请求拦截器 支持拦截请求并修改 ["getToken", "callticket_down", "binding"] 默认 []
+      ####   getToken  修改请求的参数和header，从header["authorization"]中解析出access_token并拼装到 url的get参数中
+      ####   callticket_down  修改req.headers["x-request-client"] 为 客户账号中的cust_id
+      ####   binding  在req.header中增加参数req.headers["x-request-custid"] 为 客户账号中的cust_id
+      ## 分流
+      ### 一个规则可以配置多个目标地址，可根据客户账号信息中的标签来决定转发到哪一个目标地址
+      # - TMS_PROXY_RULES={"/a1/b1":"http://localhost/c/d","/a2/b2":{"target":"http://localhost/c2/d2","auth":["..."],"trace":["...","..."],"transformRequest":["..."],"quota":["..."]},"/a3/b3":{"target":[{"url":"http://localhost/c/d","label":"trial","default":true},{"url":"http://localhost/c2/d2","label":"official"}]}}
+      # mongodb 配置
+      ## - TMS_TRACE_MONGODB_USER=admin
+      ## - TMS_TRACE_MONGODB_PASSWORD=password
+      ## - TMS_TRACE_MONGODB_HOST=127.0.0.1
+      ## - TMS_TRACE_MONGODB_PORT=27018
+      ## - TMS_TRACE_MONGODB_DATABASE=tms_api_gw
+      ## - TMS_QUOTA_MONGODB_USER=admin
+      ## - TMS_QUOTA_MONGODB_PASSWORD=password
+      ## - TMS_QUOTA_MONGODB_HOST=127.0.0.1
+      ## - TMS_QUOTA_MONGODB_PORT=27018
+      ## - TMS_QUOTA_MONGODB_DATABASE=tms_api_gw
+      ## API-接口 服务中用到的mongodb
+      ## - TMS_CTRL_MONGODB_HOST=127.0.0.1
+      ## - TMS_CTRL_MONGODB_PORT=27027
+      ## - TMS_CTRL_MONGODB_DATABASE=tms_api_gw2
+      ## - TMS_CTRL_MONGODB_USER=admin
+      ## - TMS_CTRL_MONGODB_PASSWORD=password
+      ## redis 配置
+      ## - TMS_SENDMESSAGE_REDIS_HOST=localhost
+      ## - TMS_SENDMESSAGE_REDIS_PORT=6399
+      ## - TMS_SENDMESSAGE_REDIS_PWD=密码
+      # 是否开启鉴权
+      ## - TMS_AUTH_ENABLE=true
+      ## - TMS_AUTH_HTTP_URL=   鉴权的接口地址
+      ## - TMS_AUTH_HTTP_CLIENTLABELFIELD=data.label   从哪个字段中获取用户账号信息的标签
+      ## - TMS_AUTH_HTTPAUTH_URL=   httpPortal插件 的鉴权地址
+      ## - TMS_AUTH_HTTPSER_URL=   httpService插件 的鉴权地址
+      ## - APP_SERVICEAUTHRID=[16]   httpService插件 中可以通过的角色id
+      # 是否开启配额
+      ## - TMS_QUOTA_ENABLE=true
       # 是否记录访问日志
-      # - TMS_TRACE_ENABLE=true
-      # 日志是否发送到第三方平台地址
-      # - TMS_TRACE_SEND_URL=http://localhost
-      # 访问日志是否只记录错误日志
-      # - TMS_TRACE_ENABLE_ONLYERROR=false
-      # 是否鉴权
-      # - TMS_AUTH_ENABLE=true
-      # 鉴权接口
-      # - TMS_AUTH_HTTP_URL=http://localhost/oauth/ue/auth/authorize
-      # 配额 0 不检查
-      # - TMS_QUOTA_RATELIMIT_MINUTE=0
-      # 0318 开启消息发送进程
-      # - TMS_SENDMESSAGE_ENABLE=true
-      # 0318 第三方储存日志平台地址
-      # - TMS_TRACE_SEND_URL=http://127.0.0.1:3533/etd/api/dev189/gwLog
-      # - TMS_TRACE_SEND_EVENTS=["response"]
-      # 0318 redis
-      # - TMS_SENDMESSAGE_REDIS_HOST=localhost
-      # - TMS_SENDMESSAGE_REDIS_PORT=6399
-      # app name
-      # - TMS_APP_NAME=***
-      #0401 redis 密码
-      # - TMS_SENDMESSAGE_REDIS_PWD=8811aa..
-      # 0401 门户鉴权 TMS_AUTH_HTTPAUTH_URL 默认账号管理地址
-      # - TMS_AUTH_HTTPAUTH_URL=
-      # 0401 服务商鉴权 TMS_AUTH_HTTPSER_URL 账号管理地址
-      # - TMS_AUTH_HTTPSER_URL=
+      ## - TMS_TRACE_ENABLE=true
+      ## - TMS_TRACE_ENABLE_ONLYERROR=true  默认的mongodb日志是否开启错误日志
+      ## - TMS_TRACE_MONGO_EVENTS=["recvReq", "sendReq", "response", "checkpoint"]  默认的mongodb日志记录哪些事件的日志
+      ## - TMS_TRACE_SEND_URL=http://localhost/...  http 日志发往哪个第三方地址
+      ## - TMS_TRACE_SEND_EVENTS=["response"]  http 发往第三方地址的事件
+      # 是否开启请求拦截器
+      ## - TMS_TRACEFORNREQ_ENABLE=true
+      ## - TMS_TRANSFORM_DEFAULT=[]  设置默认的请求拦截器
+      # 是否开启配额
+      ## - TMS_QUOTA_ENABLE=true
+      ## - TMS_QUOTA_RATELIMIT_MINUTE=0   每分钟允许调用的最大数
+      # 是否开启日志推送服务进程
+      ## - TMS_SENDMESSAGE_ENABLE=true  日志发往第三方接口需要用到此服务
+      # 是否开启API服务
+      ## - TMS_API_ENABLE=true  接口服务、指标服务需要开启此项服务
+      ## - TMS_APP_ROUTER_CONTROLLER=/gw/api  接口服务接口的前缀
+      ## - TMS_METRICS_ROUTER_PREFIX=/metrics  指标服务接口的前缀
+      ### - TMS_CONTROLLER_ENABLE=true   是否开启APi接口服务
+      ### - TMS_APP_SHORTURL_HOST=http://localhost  短链接的域名
+      ### - TMS_APP_SHORTURL_PREFIX=/s  短链接的前缀
+      ### - TMS_METRICS_ENABLE=true  是否开启指标服务
+      ### - TMS_METRICS_SLOWQUERYTIMEOUT=1000  指标服务中记录慢接口的依据，大于此时间后的接口记为慢接口 单位 毫秒

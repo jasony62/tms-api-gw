@@ -152,7 +152,10 @@ class Trace {
     ])
 
     let recvBody
-    if ('POST' == req.method) recvBody = await parseBody(req)
+    if ('POST' == req.method) {
+      if (req.rawBody) recvBody = req.rawBody
+      else recvBody = await parseBody(req)
+    }
     const current = new Date() * 1
     const send_elapseMs = current - req.headers['x-request-at']
     const datas = { sendUrl, sendHeaders: req.headers, recvBody, send_elapseMs, reqSendAt: current }

@@ -16,6 +16,7 @@ class Gateway {
    * gateway
    */
   createGateway() {
+    const streamify = require('stream-array')
     const httpProxy = require('http-proxy')
     //创建代理服务器监听捕获异常事件
     const proxy = httpProxy.createProxyServer()
@@ -97,11 +98,19 @@ class Gateway {
         }
       }
 
+      // 代理参数
+      let proxyOptions = {}
+
       // 转换请求
       if (this.ctx.transformRequest) {
         try {
-          const rst = await this.ctx.transformRequest.check(clientId, req, target)
+          const rst = await this.ctx.transformRequest.check(clientId, req)
           if (rst.target) target = rst.target
+          if ('POST' === req.method && rst.rawBody && typeof rst.rawBody === "string") {
+            req.rawBody = rst.rawBody
+            req.headers["content-length"] = Buffer.byteLength(req.rawBody)
+            proxyOptions.buffer = streamify([req.rawBody])
+          }
           this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "transformRequest")
         } catch (err) {
           this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "transformRequest", err)
@@ -109,9 +118,10 @@ class Gateway {
           return res.end(err.msg)
         }
       }
-
+      
       // 执行反向代理
-      proxy.web(req, res, { target })
+      proxyOptions.target = target
+      proxy.web(req, res, proxyOptions)
 
       // 复制请求
     })
