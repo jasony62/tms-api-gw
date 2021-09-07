@@ -1,4 +1,4 @@
-module.exports = function(clientId, req, target) {
+module.exports = function(clientId, req) {
   let headers = req.headers
   const Authorization = headers["authorization"]
   const [appkey, secret] = Buffer.from(Authorization.substr("Basic ".length), "base64").toString("UTF-8").split(":")

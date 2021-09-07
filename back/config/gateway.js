@@ -20,6 +20,7 @@ module.exports = {
     getToken: "./lib/transformRequest/getToken.js",
     callticket_down: "./lib/transformRequest/callticket_down.js",
     binding: "./lib/transformRequest/binding.js",
+    test: "./lib/transformRequest/test.js",
     default: process.env.TMS_TRANSFORM_DEFAULT ? JSON.parse(process.env.TMS_TRANSFORM_DEFAULT) : []
   },
   trace: { // 日志
