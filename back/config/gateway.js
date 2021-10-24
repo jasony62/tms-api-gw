@@ -99,6 +99,10 @@ module.exports = {
       type: "file",
       path: "./lib/auth/noAuth.js",
     },
+    createCust: {
+      type: "file",
+      path: "./lib/auth/creatCust.js"
+    },
     default: ["http"]
   },
   pushMessage: { // sendMessage
