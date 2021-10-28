@@ -23,6 +23,11 @@ module.exports = {
     test: "./lib/transformRequest/test.js",
     default: process.env.TMS_TRANSFORM_DEFAULT ? JSON.parse(process.env.TMS_TRANSFORM_DEFAULT) : []
   },
+  transformResponse: {
+    enable: process.env.TMS_TRACEFORNRES_ENABLE === "true" ? true : false,
+    test: "./lib/transformResponse/test.js",
+    default: process.env.TMS_TRANSFORMRES_DEFAULT ? JSON.parse(process.env.TMS_TRANSFORMRES_DEFAULT) : []
+  },
   trace: { // 日志
     enable: process.env.TMS_TRACE_ENABLE === "false" ? false : true,
     mongodb: {

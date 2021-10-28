@@ -31,8 +31,54 @@ class Gateway {
       this.ctx.emitter.emit('proxyReq', proxyReq, req, res, options, this.ctx)
     })
     // 处理获得的响应
-    proxy.on('proxyRes', (proxyRes, req, res) => {
-      this.ctx.emitter.emit('proxyRes', proxyRes, req, res, this.ctx)
+    proxy.on('proxyRes', async (proxyRes, req, res) => {
+      const disposeResponse = { // 获取响应dody
+        body: null,
+        statusCode: proxyRes.statusCode,
+        headers: proxyRes.headers,
+        getBody: async function() {
+          if (this.body !== null) return this.body
+          return new Promise((resolve, reject) => {
+            let rst = []
+            proxyRes.on('data', chunk => {
+              rst.push(chunk)
+            })
+            proxyRes.on('end', async () => {
+              rst = Buffer.concat(rst).toString()
+              this.setBody(rst)
+              return resolve(rst)
+            })
+          })
+        },
+        setBody: function(data) {
+          this.body = data
+        },
+        setStatusCode: function(code) {
+          this.statusCode = code
+        },
+        setHeader: function(header) {
+          this.headers = header
+        },
+        end: function() {
+          res.writeHead(this.statusCode, this.headers)
+          res.write(this.body)
+          return res.end()
+        }
+      }
+
+      this.ctx.emitter.emit('proxyRes', proxyRes, req, res, this.ctx, disposeResponse)
+
+      // 响应拦截器
+      if (this.ctx.transformResponse) {
+        try {
+          await this.ctx.transformResponse.check(req, disposeResponse)
+          this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "transformResponse")
+        } catch (err) {
+          this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "transformResponse", err)
+          res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' })
+          return res.end(err.msg)
+        }
+      }
     })
     // 启动http服务
     const app = http.createServer(async (req, res) => {
@@ -101,7 +147,7 @@ class Gateway {
       // 代理参数
       let proxyOptions = {}
 
-      // 转换请求
+      // 请求拦截器
       if (this.ctx.transformRequest) {
         try {
           const rst = await this.ctx.transformRequest.check(clientId, req)
@@ -117,6 +163,10 @@ class Gateway {
           res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' })
           return res.end(err.msg)
         }
+      }
+      // 响应拦截器
+      if (this.ctx.transformResponse) {
+        proxyOptions.selfHandleResponse = true
       }
       
       // 执行反向代理

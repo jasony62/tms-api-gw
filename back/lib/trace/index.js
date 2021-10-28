@@ -84,7 +84,7 @@ async function _eventTrace(req, ctx, TraceObj, event, datas, options = {}) {
           if (targetTc.onlyError === true && options.proxyRes.statusCode === 200) { // 只在发生错误时获取body数据
             await targetTc.mongoose.updateOne( { requestId }, { $set: datas } )
           } else {
-            const rstBody = await options.getResBody.get(options.proxyRes)
+            const rstBody = await options.getResBody.getBody()
             datas.responseBody = rstBody
             await targetTc.mongoose.updateOne( { requestId }, { $set: datas } )
           }
@@ -97,7 +97,7 @@ async function _eventTrace(req, ctx, TraceObj, event, datas, options = {}) {
             continue
           }
           if (targetTc.onlyError !== true || (targetTc.onlyError === true && options.proxyRes.statusCode !== 200)) {  // 只在发生错误时获取body数据
-            const rstBody = await options.getResBody.get(options.proxyRes)
+            const rstBody = await options.getResBody.getBody()
             datas.responseBody = rstBody
           } else {
             delete datas.responseBody
@@ -166,7 +166,7 @@ class Trace {
     return 
   }
 
-  async logResponse(proxyRes, req, res, ctx) {
+  async logResponse(proxyRes, req, res, ctx, getResBody) {
     const current = new Date() * 1
     const requestAt = req.headers['x-request-at']
     const res_elapseMs = current - requestAt
@@ -177,24 +177,6 @@ class Trace {
       responseHeaders: headers,
       res_elapseMs,
       responseAt: current
-    }
-
-    const getResBody = {
-      body: null,
-      get: async function(proxyRes2) {
-        if (this.body !== null) return this.body
-        return new Promise((resolve, reject) => {
-          let rst = []
-          proxyRes2.on('data', chunk => {
-            rst.push(chunk)
-          })
-          proxyRes2.on('end', async () => {
-            rst = Buffer.concat(rst).toString()
-            this.body = rst
-            return resolve(this.body)
-          })
-        })
-      }
     }
 
     _eventTrace(req, ctx, this, "response", datas, { proxyRes, getResBody })
@@ -222,6 +204,8 @@ class Trace {
       datas.err_elapseMs = current - req.headers['x-request-at']
     } else if (type === "transformRequest") {
       datas.transformRequest_elapseMs = current - req.headers['x-request-at']
+    } else if (type === "transformResponse") {
+      datas.transformResponse_elapseMs = current - req.headers['x-request-at']
     } else if (type === "quota") {
       datas.quota_elapseMs = current - req.headers['x-request-at']
     }
@@ -276,6 +260,7 @@ Trace.createModel = function(mongoose) {
         transformRequest_elapseMs: { type: Number, default: 0 },
         send_elapseMs: { type: Number, default: 0 },
         res_elapseMs: { type: Number, default: 0 },
+        transformResponse_elapseMs: { type: Number, default: 0 },
         checkpointStatus: {
           auth: String,
           quota: String,

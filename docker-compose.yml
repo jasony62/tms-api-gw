@@ -84,3 +84,5 @@ services:
       ### - TMS_APP_SHORTURL_PREFIX=/s  短链接的前缀
       ### - TMS_METRICS_ENABLE=true  是否开启指标服务
       ### - TMS_METRICS_SLOWQUERYTIMEOUT=1000  指标服务中记录慢接口的依据，大于此时间后的接口记为慢接口 单位 毫秒
+      # 是否开启响应拦截器
+      ## - TMS_TRACEFORNRES_ENABLE=true
