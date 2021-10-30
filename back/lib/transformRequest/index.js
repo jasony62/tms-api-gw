@@ -25,6 +25,7 @@ class HttpTransformReq {
    */
   async check(clientId, req) {
     const targetTransforms = this.getTargetAuth(req.targetRule)
+    let returData = {}
     for (const t of targetTransforms) {
       const tarArf = this.transformInstanceMap.get(t)
       let func
@@ -37,14 +38,13 @@ class HttpTransformReq {
         func = tarArf
       }
       if (typeof func === "function") {
-        const rst = await func(clientId, req)
-        if (Object.prototype.toString.call(rst) !== '[object Object]') {
+        await func(clientId, req, returData)
+        if (Object.prototype.toString.call(returData) !== '[object Object]') {
           return Promise.reject({msg: "请求拦截器 返回的不是一个object"})
         }
-        return rst
       }
     }
-    return {}
+    return returData
   }
 }
 

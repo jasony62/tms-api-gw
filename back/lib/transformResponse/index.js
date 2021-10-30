@@ -28,6 +28,12 @@ class HttpTransformRes {
     const resBody = await disposeResponse.getBody()
     const resStatusCode = await disposeResponse.statusCode
     const resHeaders = await disposeResponse.headers
+
+    let returnData = {
+      statusCode: resStatusCode, 
+      headers: resHeaders, 
+      body: resBody
+    }
     for (const t of targetTransforms) {
       const tarArf = this.transformInstanceMap.get(t)
       let func
@@ -40,18 +46,17 @@ class HttpTransformRes {
         func = tarArf
       }
       if (typeof func === "function") {
-        const rst = await func(req, resStatusCode, resHeaders, resBody)
-        if (Object.prototype.toString.call(rst) !== '[object Object]') {
-          return Promise.reject({msg: "请求拦截器 返回的不是一个object"})
+        await func(req, returnData)
+        if (Object.prototype.toString.call(returnData) !== '[object Object]') {
+          return Promise.reject({msg: "响应拦截器 返回的不是一个Object"})
         }
-        
-        if (rst.statusCode) disposeResponse.setStatusCode(parseInt(rst.statusCode))
-        if (rst.headers) disposeResponse.setHeader(rst.headers)
-        if (rst.body) disposeResponse.setBody(rst.body)
-        
-        return disposeResponse.end()
       }
     }
+
+    if (returnData.statusCode) disposeResponse.setStatusCode(parseInt(returnData.statusCode))
+    if (returnData.headers) disposeResponse.setHeader(returnData.headers)
+    if (returnData.body) disposeResponse.setBody(returnData.body)
+    
     return disposeResponse.end()
   }
 }

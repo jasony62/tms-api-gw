@@ -2,7 +2,7 @@ module.exports = function(clientId, req) {
   
   if (req.clientInfo && req.clientInfo.data && req.clientInfo.data.cust_id) 
     req.headers["x-request-custid"] = req.clientInfo.data.cust_id
-  else return Promise.reject({msg: "未找到custid"})
+  else return Promise.reject({msg: "未找到cust_id"})
 
   return Promise.resolve({ })
 }

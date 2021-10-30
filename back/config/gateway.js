@@ -21,11 +21,13 @@ module.exports = {
     callticket_down: "./lib/transformRequest/callticket_down.js",
     binding: "./lib/transformRequest/binding.js",
     test: "./lib/transformRequest/test.js",
+    pa_hj: "./lib/transformRequest/pingan_hujiao.js",
     default: process.env.TMS_TRANSFORM_DEFAULT ? JSON.parse(process.env.TMS_TRANSFORM_DEFAULT) : []
   },
   transformResponse: {
     enable: process.env.TMS_TRACEFORNRES_ENABLE === "true" ? true : false,
-    test: "./lib/transformResponse/test.js",
+    pa_hj: "./lib/transformResponse/pingan_hujiao.js",
+    test_ase: "./lib/transformResponse/test_ase.js",
     default: process.env.TMS_TRANSFORMRES_DEFAULT ? JSON.parse(process.env.TMS_TRANSFORMRES_DEFAULT) : []
   },
   trace: { // 日志
