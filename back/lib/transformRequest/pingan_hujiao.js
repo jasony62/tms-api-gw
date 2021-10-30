@@ -23,9 +23,21 @@ module.exports = async function(clientId, req, returData) {
   } else body = await parseBody(req)
 
   body = JSON.parse(body)
-  if (Array.isArray(body)) {
-    for (let v of body) {
-      if (v.numberA) v.numberA = decText(v.numberA, key, iv)
+
+  let url = require('url').parse(req.originUrl).pathname
+  let urlArr = url.split("/")
+  let funcName = urlArr.slice(-1)[0]
+
+  if (funcName === "selectNum") {
+    if (Array.isArray(body)) {
+      for (let v of body) {
+        if (v.numberA) v.numberA = decText(v.numberA, key, iv)
+      }
+    }
+  } else if (funcName === "deleteNum") {
+    if (Object.prototype.toString.call(body) === '[object Object]') {
+      if (body.numberA) body.numberA = decText(body.numberA, key, iv)
+      if (body.numberX) body.numberX = decText(body.numberX, key, iv)
     }
   }
 

@@ -8,17 +8,35 @@ module.exports = async function(req, returnData) {
   let {statusCode, headers, body} = returnData
 
   body = JSON.parse(body)
-  if (body.returnCode == "0") {
-    if (body.resBody && body.resBody.toMongoList) {
-      let toMongoList = body.resBody.toMongoList
-      if (Array.isArray(toMongoList)) {
-        for (let v of toMongoList) {
+
+  let url = require('url').parse(req.originUrl).pathname
+  let urlArr = url.split("/")
+  let funcName = urlArr.slice(-1)[0]
+
+  if (funcName === "selectNum") {
+    if (body.returnCode == "0") {
+      if (body.resBody && body.resBody.toMongoList) {
+        let toMongoList = body.resBody.toMongoList
+        if (Array.isArray(toMongoList)) {
+          for (let v of toMongoList) {
+            if (v.numberA) v.numberA = encText(v.numberA, key, iv)
+            if (v.numberX) v.numberX = encText(v.numberX, key, iv)
+          }
+        }
+      }
+    }
+  } else if (funcName === "deleteNum") {
+    if (body.returnCode == "0") {
+      if (body.resBody && Array.isArray(body.resBody)) {
+        let resBody = body.resBody
+        for (let v of resBody) {
           if (v.numberA) v.numberA = encText(v.numberA, key, iv)
           if (v.numberX) v.numberX = encText(v.numberX, key, iv)
         }
       }
     }
   }
+
   body = JSON.stringify(body)
   
   headers["content-length"] = Buffer.byteLength(body)
