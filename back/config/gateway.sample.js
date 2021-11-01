@@ -92,6 +92,11 @@ module.exports = {
     getToken: "./lib/transformRequest/*.js", // ‘./*.js’ or function() {}
     default: []
   },
+  transformResponse: {
+    enable: false,
+    test_ase: "./lib/transformResponse/test_ase.js",
+    default: []
+  },
   pushMessage: { // sendMessage
     enable: true,
     logPath: '', // 是否需要日志文件

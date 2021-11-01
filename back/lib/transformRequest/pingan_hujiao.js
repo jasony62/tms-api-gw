@@ -1,3 +1,4 @@
+const _ = require("lodash")
 const { encText, decText } = require("../transformResponse/js_ase")
 
 const key = process.env.PINGAN_JIAMI_KEY || "pduTl8r17FQoAMQp";  //十六位十六进制数作为密钥
@@ -29,15 +30,19 @@ module.exports = async function(clientId, req, returData) {
   let funcName = urlArr.slice(-1)[0]
 
   if (funcName === "selectNum") {
-    if (Array.isArray(body)) {
-      for (let v of body) {
-        if (v.numberA) v.numberA = decText(v.numberA, key, iv)
+    if (process.env.PINGAN_GETCUSTID_PATH && process.env.PINGAN_CUSTID_VALUE && _.get(req.clientInfo, process.env.PINGAN_CUSTID_PATH) === process.env.PINGAN_GETCUSTID_VALUE) {
+      if (Array.isArray(body)) {
+        for (let v of body) {
+          if (v.numberA) v.numberA = decText(v.numberA, key, iv)
+        }
       }
     }
   } else if (funcName === "deleteNum") {
-    if (Object.prototype.toString.call(body) === '[object Object]') {
-      if (body.numberA) body.numberA = decText(body.numberA, key, iv)
-      if (body.numberX) body.numberX = decText(body.numberX, key, iv)
+    if (process.env.PINGAN_GETCUSTID_PATH && process.env.PINGAN_CUSTID_VALUE && _.get(req.clientInfo, process.env.PINGAN_CUSTID_PATH) === process.env.PINGAN_GETCUSTID_VALUE) {
+      if (Object.prototype.toString.call(body) === '[object Object]') {
+        if (body.numberA) body.numberA = decText(body.numberA, key, iv)
+        if (body.numberX) body.numberX = decText(body.numberX, key, iv)
+      }
     }
   }
 
