@@ -15,21 +15,42 @@ module.exports = async function(req, returnData) {
   let funcName = urlArr.slice(-1)[0]
 
   if (funcName === "selectNum") {
-    if (process.env.PINGAN_GETCUSTID_PATH && process.env.PINGAN_CUSTID_VALUE && _.get(req.clientInfo, process.env.PINGAN_CUSTID_PATH) === process.env.PINGAN_GETCUSTID_VALUE) {
+    if (process.env.PINGAN_CUSTID_PATH && process.env.PINGAN_CUSTID_VALUE && _.get(req.clientInfo, process.env.PINGAN_CUSTID_PATH) === process.env.PINGAN_CUSTID_VALUE) {
       if (body.returnCode == "0") {
-        if (body.resBody && body.resBody.toMongoList) {
-          let toMongoList = body.resBody.toMongoList
-          if (Array.isArray(toMongoList)) {
-            for (let v of toMongoList) {
-              if (v.numberA) v.numberA = encText(v.numberA, key, iv)
-              if (v.numberX) v.numberX = encText(v.numberX, key, iv)
+        if (body.resBody) {
+          if (body.resBody.toMongoList) {
+            let toMongoList = body.resBody.toMongoList
+            if (Array.isArray(toMongoList)) {
+              for (let v of toMongoList) {
+                if (v.numberA) v.numberA = encText(v.numberA, key, iv)
+                if (v.numberX) v.numberX = encText(v.numberX, key, iv)
+              }
             }
           }
+
+          if (body.resBody.existList) {
+            let existList = body.resBody.existList
+            if (Array.isArray(existList)) {
+              for (let v of existList) {
+                if (v.numberA) v.numberA = encText(v.numberA, key, iv)
+              }
+            }
+          }
+
+          if (body.resBody.inaccuracyList) {
+            let inaccuracyList = body.resBody.inaccuracyList
+            if (Array.isArray(inaccuracyList)) {
+              for (let v of inaccuracyList) {
+                if (v.numberA) v.numberA = encText(v.numberA, key, iv)
+              }
+            }
+          }
+
         }
       }
     }
   } else if (funcName === "deleteNum") {
-    if (process.env.PINGAN_GETCUSTID_PATH && process.env.PINGAN_CUSTID_VALUE && _.get(req.clientInfo, process.env.PINGAN_CUSTID_PATH) === process.env.PINGAN_GETCUSTID_VALUE) {
+    if (process.env.PINGAN_CUSTID_PATH && process.env.PINGAN_CUSTID_VALUE && _.get(req.clientInfo, process.env.PINGAN_CUSTID_PATH) === process.env.PINGAN_CUSTID_VALUE) {
       if (body.returnCode == "0") {
         if (body.resBody && Array.isArray(body.resBody)) {
           let resBody = body.resBody

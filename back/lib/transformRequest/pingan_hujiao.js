@@ -29,8 +29,10 @@ module.exports = async function(clientId, req, returData) {
   let urlArr = url.split("/")
   let funcName = urlArr.slice(-1)[0]
 
+console.log("test_pingan_jiami", process.env.PINGAN_CUSTID_PATH , process.env.PINGAN_CUSTID_VALUE , _.get(req.clientInfo, process.env.PINGAN_CUSTID_PATH) , process.env.PINGAN_CUSTID_VALUE)
+
   if (funcName === "selectNum") {
-    if (process.env.PINGAN_GETCUSTID_PATH && process.env.PINGAN_CUSTID_VALUE && _.get(req.clientInfo, process.env.PINGAN_CUSTID_PATH) === process.env.PINGAN_GETCUSTID_VALUE) {
+    if (process.env.PINGAN_CUSTID_PATH && process.env.PINGAN_CUSTID_VALUE && _.get(req.clientInfo, process.env.PINGAN_CUSTID_PATH) === process.env.PINGAN_CUSTID_VALUE) {
       if (Array.isArray(body)) {
         for (let v of body) {
           if (v.numberA) v.numberA = decText(v.numberA, key, iv)
@@ -38,7 +40,7 @@ module.exports = async function(clientId, req, returData) {
       }
     }
   } else if (funcName === "deleteNum") {
-    if (process.env.PINGAN_GETCUSTID_PATH && process.env.PINGAN_CUSTID_VALUE && _.get(req.clientInfo, process.env.PINGAN_CUSTID_PATH) === process.env.PINGAN_GETCUSTID_VALUE) {
+    if (process.env.PINGAN_CUSTID_PATH && process.env.PINGAN_CUSTID_VALUE && _.get(req.clientInfo, process.env.PINGAN_CUSTID_PATH) === process.env.PINGAN_CUSTID_VALUE) {
       if (Object.prototype.toString.call(body) === '[object Object]') {
         if (body.numberA) body.numberA = decText(body.numberA, key, iv)
         if (body.numberX) body.numberX = decText(body.numberX, key, iv)
