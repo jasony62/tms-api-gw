@@ -6,6 +6,21 @@ const { Context } = require('./context')
 const http = require('http')
 const _ = require("lodash")
 
+function ip(req) {
+
+  const clientIP = req.headers['x-real-ip'] || 
+    req.headers['x-forwarded-for'] || 
+    req.connection.remoteAddress ||
+    req.socket.remoteAddress ||
+    req.connection.socket.remoteAddress || 
+    req.ip || ''
+
+  let ip = clientIP.match(/\d+.\d+.\d+.\d+/)
+  ip = ip ? ip.join('.') : null
+
+  return ip
+}
+
 class Gateway {
   constructor(ctx) {
     this.ctx = ctx
@@ -87,6 +102,10 @@ class Gateway {
         req.headers['x-request-id'] = uuid()
       }
       req.headers['x-request-at'] = new Date() * 1
+
+      // 获取真实ip地址
+      const clientIP = ip(req)
+      req.headers['x-request-ip'] = clientIP
 
       // 获取转发规则
       const getTargetRst = await this.rules.getTargetRules(req)

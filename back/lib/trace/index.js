@@ -127,6 +127,7 @@ class Trace {
   async logRecvReq(req, res, ctx) {
     const { method, headers, originUrl: url } = req
     const requestId = headers['x-request-id']
+    const requestIp = headers['x-request-ip']
     const recvUrl = _.pick(require('url').parse(url, true), [
       'protocol',
       'hostname',
@@ -135,8 +136,12 @@ class Trace {
       'query'
     ])
     
-    const datas = { requestId, recvUrl, method, recvHeaders: headers, requestAt: req.headers['x-request-at'] }
-    _eventTrace(req, ctx, this, "recvReq", datas)
+    const datas = { requestId, requestIp, recvUrl, method, recvHeaders: headers, requestAt: req.headers['x-request-at'] }
+    if (process.env.SYNC_TRACE_LOG_INSERT === "true") {
+      await _eventTrace(req, ctx, this, "recvReq", datas)
+    } else {
+      _eventTrace(req, ctx, this, "recvReq", datas)
+    }
 
     logger.debug(`logRecvReq || ${req.headers['x-request-id']} || ${req.originUrl} || ${new Date() * 1 - req.headers['x-request-at']}`)
     return 
@@ -228,6 +233,7 @@ Trace.createModel = function(mongoose) {
     new Schema(
       {
         requestId: String,
+        requestIp: String,
         requestAt: { type: Date },
         clientId: String,
         clientInfo: { type: Object, default: {} },

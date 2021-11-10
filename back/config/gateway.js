@@ -89,6 +89,7 @@ module.exports = {
       url: process.env.TMS_AUTH_HTTP_URL || "http://localhost/auth/token",
       clientIdField: process.env.TMS_AUTH_HTTP_CLIENTIDFIELD || "id",
       clientLabelField: process.env.TMS_AUTH_HTTP_CLIENTLABELFIELD || null,
+      whiteListIPFIELD: process.env.TMS_AUTH_HTTP_WLIPFIELD || false
     },
     httpPortal: {
       type: "file",
@@ -97,10 +98,12 @@ module.exports = {
     httpService: {
       type: "file",
       path: "./lib/auth/serviceAuth.js",
+      whiteListIPFIELD: process.env.TMS_AUTH_HTTPSER_WLIPFIELD || false
     },
     httpYz: {
       type: "file",
       path: "./lib/auth/yz_auth.js",
+      whiteListIPFIELD: process.env.TMS_AUTH_HTTPYZ_WLIPFIELD || false
     },
     noauth: {
       type: "file",
