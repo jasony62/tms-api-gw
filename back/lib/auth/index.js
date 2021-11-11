@@ -86,7 +86,7 @@ class HttpAuth {
               return re.test(req.headers["x-request-ip"])
             })
           ) {
-            return Promise.reject({ msg: "权限错误：无权访问(1003)" })
+            return Promise.reject({ msg: "权限错误：无权访问(1003)", clientId: passData.clientId, clientInfo: passData.clientInfo })
           }
         }
       }

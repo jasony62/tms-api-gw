@@ -135,6 +135,10 @@ class Gateway {
           req.headers['x-request-client'] = clientId
           this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "auth")
         } catch (err) {
+          if (err.clientId) clientId = err.clientId
+          if (err.clientId) req.headers['x-request-client'] = clientId
+          if (err.clientInfo) req.clientInfo = err.clientInfo
+          if (err.clientLabel) clientLabel = err.clientLabel
           this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "auth", err)
           res.writeHead(401, { 'Content-Type': 'text/plain; charset=utf-8' })
           return res.end(err.msg)
