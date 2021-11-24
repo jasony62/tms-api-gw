@@ -79,7 +79,14 @@ module.exports = {
       }
     },
     rule_test: "./lib/quota/test.js",
-    default: []
+    statistical_Day: {
+      type: "object",
+      item: {
+        custid: "custInfo.data.cust_id",
+        api: "originUrlObj.pathname"
+      }
+    },
+    default: ["statistical_Day"]
   },
   auth: {
     enable: process.env.TMS_AUTH_ENABLE === "true" ? true : false,

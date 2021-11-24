@@ -5,6 +5,7 @@ const uuid = require('uuid')
 const { Context } = require('./context')
 const http = require('http')
 const _ = require("lodash")
+const _url = require('url')
 
 function ip(req) {
 
@@ -119,6 +120,13 @@ class Gateway {
         req.url = getTargetRst.newReqUrl
         req.urlPrefix = getTargetRst.urlPrefix
         req.originUrl = getTargetRst.originUrl
+        req.originUrlObj = _.pick(_url.parse(req.originUrl, true), [
+          'protocol',
+          'hostname',
+          'port',
+          'pathname',
+          'query'
+        ])
       }
 
       // 记录收到请求的原始信息
@@ -153,6 +161,13 @@ class Gateway {
         return res.end('Not found target')
       } else {
         req.targetUrl = target + req.url
+        req.targetUrlObj = _.pick(_url.parse(req.targetUrl, true), [
+          'protocol',
+          'hostname',
+          'port',
+          'pathname',
+          'query'
+        ])
       }
 
       // 检查配额

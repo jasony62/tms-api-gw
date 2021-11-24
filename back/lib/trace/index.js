@@ -70,26 +70,33 @@ async function _eventTrace(req, ctx, TraceObj, event, datas, options = {}) {
     for (const tc of targetTraces) {
       const targetTc = TraceObj.traceInstanceMap.get(tc)
       if (!targetTc.type) targetTc.type = "mongodb"
+
       if (targetTc.events && !targetTc.events.includes(event))
           continue
+
       if (targetTc.type === "mongodb") {
+        let where
+        if (req.trace_log_id) where = { _id: req.trace_log_id}
+        else where = { requestId }
+
         if (event === "recvReq") {
           await targetTc.mongoose.create(
             datas,
-            err => {
+            (err, jellybean, snickers) => {
               if (err) logger.error(`TraceLog.create || ${req.headers['x-request-id']} || ${req.originUrl} || ${new Date() * 1 - req.headers['x-request-at']}`, err)
+              else req.trace_log_id = jellybean._id
             }
           )
         } else if (event === "response") {
           if (targetTc.onlyError === true && options.proxyRes.statusCode === 200) { // 只在发生错误时获取body数据
-            await targetTc.mongoose.updateOne( { requestId }, { $set: datas } )
+            await targetTc.mongoose.updateOne( where, { $set: datas }, {upsert: true} )
           } else {
             const rstBody = await options.getResBody.getBody()
             datas.responseBody = rstBody
-            await targetTc.mongoose.updateOne( { requestId }, { $set: datas } )
+            await targetTc.mongoose.updateOne( where, { $set: datas }, {upsert: true} )
           }
         } else {
-          await targetTc.mongoose.updateOne( { requestId }, { $set: datas } )
+          await targetTc.mongoose.updateOne( where, { $set: datas }, {upsert: true} )
         }
       } else if (targetTc.type === "http") {
         if (event === "response") {
@@ -125,36 +132,20 @@ class Trace {
    * @param {*} req
    */
   async logRecvReq(req, res, ctx) {
-    const { method, headers, originUrl: url } = req
+    const { method, headers, originUrl: url, originUrlObj } = req
     const requestId = headers['x-request-id']
     const requestIp = headers['x-request-ip']
-    const recvUrl = _.pick(require('url').parse(url, true), [
-      'protocol',
-      'hostname',
-      'port',
-      'pathname',
-      'query'
-    ])
+    const recvUrl = originUrlObj
     
     const datas = { requestId, requestIp, recvUrl, method, recvHeaders: headers, requestAt: req.headers['x-request-at'] }
-    if (process.env.SYNC_TRACE_LOG_INSERT === "true") {
-      await _eventTrace(req, ctx, this, "recvReq", datas)
-    } else {
-      _eventTrace(req, ctx, this, "recvReq", datas)
-    }
+    await _eventTrace(req, ctx, this, "recvReq", datas)
 
-    logger.debug(`logRecvReq || ${req.headers['x-request-id']} || ${req.originUrl} || ${new Date() * 1 - req.headers['x-request-at']}`)
+    logger.debug(`logRecvReq || ${req.headers['x-request-id']} || ${url} || ${new Date() * 1 - req.headers['x-request-at']}`)
     return 
   }
 
   async logSendReq(proxyReq, req, res, options, ctx) {
-    const sendUrl = _.pick(require('url').parse(req.targetUrl, true), [
-      'protocol',
-      'hostname',
-      'port',
-      'pathname',
-      'query'
-    ])
+    const sendUrl = req.targetUrlObj
 
     let recvBody
     if ('POST' == req.method) {
@@ -165,7 +156,7 @@ class Trace {
     const send_elapseMs = current - req.headers['x-request-at']
     const datas = { sendUrl, sendHeaders: req.headers, recvBody, send_elapseMs, reqSendAt: current }
 
-    _eventTrace(req, ctx, this, "sendReq", datas)
+    await _eventTrace(req, ctx, this, "sendReq", datas)
 
     logger.debug(`logSendReq || ${req.headers['x-request-id']} || ${req.originUrl} || ${send_elapseMs}`)
     return 
@@ -184,7 +175,7 @@ class Trace {
       responseAt: current
     }
 
-    _eventTrace(req, ctx, this, "response", datas, { proxyRes, getResBody })
+    await _eventTrace(req, ctx, this, "response", datas, { proxyRes, getResBody })
     logger.debug(`logResponse || ${req.headers['x-request-id']} || ${req.originUrl} || ${res_elapseMs}`)
   }
 
@@ -214,8 +205,7 @@ class Trace {
     } else if (type === "quota") {
       datas.quota_elapseMs = current - req.headers['x-request-at']
     }
-
-    _eventTrace(req, ctx, this, "checkpoint", datas)
+    await _eventTrace(req, ctx, this, "checkpoint", datas)
 
     let msg = `logCheckpointReq ${type} || ${req.headers['x-request-id']} || ${req.originUrl} || ${current - req.headers['x-request-at']}`
     if ( error ) logger.error(msg, error)
