@@ -100,7 +100,7 @@ async function _eventTrace(req, ctx, TraceObj, event, datas, options = {}) {
         }
       } else if (targetTc.type === "http") {
         if (event === "response") {
-          if (targetTc.sendOnlyError === true && options.proxyRes.statusCode === 200) { // 只发送错误日志
+          if (targetTc.onlyError === true && options.proxyRes.statusCode === 200) { // 只发送错误日志
             continue
           }
           if (targetTc.onlyError !== true || (targetTc.onlyError === true && options.proxyRes.statusCode !== 200)) {  // 只在发生错误时获取body数据
@@ -185,14 +185,15 @@ class Trace {
     if (!type) 
       return 
 
-    let checkpointStatus = {}, checkpointStatusMsg = "passe"
-
+    let checkpointStatus = "checkpointStatus", checkpointStatusMsg = "passe"
     if (error) checkpointStatusMsg = error.msg
-    checkpointStatus[type] = checkpointStatusMsg
+    checkpointStatus += `.${type}`
 
     const clientId = req.headers['x-request-client']
-    let datas = { checkpointStatus, clientId }
+    let datas = { }
+    datas[checkpointStatus] = checkpointStatusMsg
     if (type === "auth") {
+      datas.clientId = clientId
       datas.auth_elapseMs = current - req.headers['x-request-at']
       datas.clientInfo = req.clientInfo
     } else if (type === "error") {
@@ -260,6 +261,8 @@ Trace.createModel = function(mongoose) {
         checkpointStatus: {
           auth: String,
           quota: String,
+          transformRequest: String,
+          transformResponse: String,
           error: String
         },
         reqErrorAt: { type: Date },

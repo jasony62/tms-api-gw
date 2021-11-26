@@ -72,10 +72,14 @@ module.exports = {
       maxPoolSize: parseInt(process.env.TMS_TRACE_MONGODB_MAXPOOLSIZE) || 100
     },
     rule_all: {
+      type: "object",
+      item: {
+        custid: "custInfo.data.cust_id",
+        api: "originUrlObj.pathname"
+      },
       rateLimit: {
-        minute: {
-          limit: process.env.TMS_QUOTA_RATELIMIT_MINUTE || 0
-        }
+        rate: "0 * * * * ?",
+        limit: process.env.TMS_QUOTA_RATELIMIT_MINUTE || 0
       }
     },
     rule_test: "./lib/quota/test.js",
@@ -85,6 +89,16 @@ module.exports = {
         custid: "custInfo.data.cust_id",
         api: "originUrlObj.pathname"
       }
+    },
+    http: {
+      type: "http",
+      url: process.env.TMS_QUOTA_HTTPURL,
+      parameter: {
+        url: "originUrl",
+        headers: "headers"
+      },
+      itemIdField: "id",
+      rateLimitField: "rateLimit",
     },
     default: ["statistical_Day"]
   },

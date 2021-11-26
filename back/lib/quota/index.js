@@ -4,6 +4,8 @@ const _ = require("lodash")
 const fs = require("fs")
 const PATH = require("path")
 const cronParser = require('cron-parser')
+const axios = require('axios')
+const adapter = require('axios/lib/adapters/http')
 
 class Quota {
   constructor(ModelDay, ModelArchive, quotaRulesMap, defaultQuota) {
@@ -52,7 +54,7 @@ class Quota {
       return Promise.reject({msg: `解析错误：控制规则不是一个object`})
     }
     
-    let itemId = null, rateLimit = { rate: "0 * * * * ?", limit: 0 }
+    let itemId = null, rateLimit = null
     if (quotaConfig.type === "object") {
       let items = []
       for (const itemKey in quotaConfig.item) {
@@ -61,7 +63,32 @@ class Quota {
       itemId = items.join(":")
       if (quotaConfig.rateLimit) rateLimit = quotaConfig.rateLimit
     } else if (quotaConfig.type === "http") {
-
+      let postBody = {}
+      for (const key in quotaConfig.parameter) {
+        postBody[key] = _.get(req, quotaConfig.parameter[key])
+      }
+      let options = { adapter }
+      options.timeout = quotaConfig.timeout || 1000
+      options.maxBodyLength = Infinity
+      options.maxContentLength = Infinity
+      const instance = axios.create(options)
+      await instance
+        .post(`${quotaConfig.url}`, postBody)
+        .then( res => {
+          if (!res.data || res.data.code !== 0) {
+            let errMsg = "返回异常"
+            if (res.data && res.data.msg) errMsg = res.data.msg
+            return Promise.reject({ msg: errMsg })
+          }
+          const item = res.data.result
+          itemId = _.get(item, quotaConfig.itemIdField, null)
+          rateLimit = _.get(item, quotaConfig.rateLimitField, null)
+        })
+        .catch( err => {
+          let msg = err.msg ? err.msg : err.toString()
+          logger.debug("quota item", req.headers['x-request-id'], err)
+          return Promise.reject({ msg })
+        })
     } else if (quotaConfig.type === "file") { // {itemId:****,rateLimit:****}
       const quoPath = PATH.resolve(quotaConfig.path)
       if (fs.existsSync(quoPath)) {
@@ -73,6 +100,9 @@ class Quota {
 
     if (!itemId) {
       itemId = `${clientId}:${api}`
+    }
+    if (!rateLimit) {
+      rateLimit = { rate: "0 * * * * ?", limit: 0 }
     }
   
     return { id: itemId, rateLimit }
