@@ -80,7 +80,7 @@ class Quota {
             if (res.data && res.data.msg) errMsg = res.data.msg
             return Promise.reject({ msg: errMsg })
           }
-          const item = res.data.result
+          const item = res.data
           itemId = _.get(item, quotaConfig.itemIdField, null)
           rateLimit = _.get(item, quotaConfig.rateLimitField, null)
         })

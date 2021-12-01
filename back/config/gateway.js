@@ -90,15 +90,16 @@ module.exports = {
         api: "originUrlObj.pathname"
       }
     },
-    http: {
+    http_test: {
       type: "http",
       url: process.env.TMS_QUOTA_HTTPURL,
       parameter: {
         url: "originUrl",
-        headers: "headers"
+        headers: "headers",
+        client: "clientInfo"
       },
-      itemIdField: "id",
-      rateLimitField: "rateLimit",
+      itemIdField: "result.0.id",
+      rateLimitField: "result.0.rateLimit",
     },
     default: ["statistical_Day"]
   },
