@@ -100,6 +100,7 @@ module.exports = {
       },
       itemIdField: "result.0.id",
       rateLimitField: "result.0.rateLimit",
+      attachedField: "result.0.attachedField"
     },
     default: ["statistical_Day"]
   },

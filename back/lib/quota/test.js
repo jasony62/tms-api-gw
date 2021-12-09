@@ -8,9 +8,12 @@ module.exports = function(req){
     numberA: "originUrlObj.query.access_token"
   }
   
+  let attachedField = {}
   let items = []
   for (const itemKey in item) {
-    items.push(_.get(req, item[itemKey], ""))
+    const val = _.get(req, item[itemKey], "")
+    attachedField[itemKey] = val
+    items.push(val)
   }
   const itemId = items.join(":")
 
@@ -19,6 +22,7 @@ module.exports = function(req){
     rateLimit: {
       rate: "0 * * * * ?",
       limit: process.env.TMS_QUOTA_RATELIMIT_MINUTE_TEST || 0
-    }
+    },
+    attachedField
   }
 }
