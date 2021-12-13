@@ -141,10 +141,10 @@ class Quota {
       const quotaConfig = this.quotaRulesMap.get(quotaRule)
        // 获取分类id
       const item = await this._getItemRule(req, quotaConfig, quotaRule)
-      if (!item.rateLimit) {
+      if (!item.rateLimit || !item.rateLimit.rate) {
         continue
       }
-      
+
       const itemId = item.id
       const rateLimit = item.rateLimit
       if (!rateLimit.rate) {

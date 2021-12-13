@@ -88,6 +88,10 @@ module.exports = {
       item: {
         custid: "custInfo.data.cust_id",
         api: "originUrlObj.pathname"
+      },
+      rateLimit: {
+        rate: process.env.TMS_QUOTA_DAY_RATE || null,
+        limit: process.env.TMS_QUOTA_DAY_LIMIT || 0
       }
     },
     http_test: {

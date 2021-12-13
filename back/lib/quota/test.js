@@ -20,7 +20,7 @@ module.exports = function(req){
   return {
     itemId,
     rateLimit: {
-      rate: "0 * * * * ?",
+      rate: process.env.TMS_QUOTA_RATELIMIT_RATE_TEST || "0 * * * * ?",
       limit: process.env.TMS_QUOTA_RATELIMIT_MINUTE_TEST || 0
     },
     attachedField
