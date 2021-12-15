@@ -86,7 +86,7 @@ module.exports = {
     statistical_Day: {
       type: "object",
       item: {
-        custid: "custInfo.data.cust_id",
+        custid: "headers.x-request-client",
         api: "originUrlObj.pathname"
       },
       rateLimit: {
