@@ -27,21 +27,21 @@ MongoContext.connect = function(url) {
       logger.error(msg)
       return Promise.reject(new MongoError(msg))
     })
-    .then((mongoObj) => {
-      mongoObj.on('error', err => {
+    .then((conn) => {
+      conn.on('error', err => {
         const msg = `mongodb操作错误：${err.message}`
         logger.error(msg)
         throw new MongoError(msg)
       })
 
       logger.info(`连接'${url}'成功`)
-      mongoObj.Schema = mongoose.Schema
-      return mongoObj
+      conn.Schema = mongoose.Schema
+      return conn
     })
 }
 MongoContext.ins = (function() {
   let _instances = new Map()
-  return async function({ user, password, host, port, database, maxPoolSize }) {
+  return async function({ user, password, host, port, database, maxPoolSize, authSource = "admin" }) {
     if (typeof host !== 'string') {
       let msg = '没有指定mongodb的主机地址'
       logger.error(msg)
@@ -61,7 +61,7 @@ MongoContext.ins = (function() {
     let url
     maxPoolSize = +maxPoolSize
     if (user && typeof user === "string" && password && typeof password === "string") {
-      url = `mongodb://${user}:${password}@${host}:${port}/${database}?authSource=admin`
+      url = `mongodb://${user}:${password}@${host}:${port}/${database}?authSource=${authSource}`
       if (maxPoolSize > 5) url += `&maxPoolSize=${maxPoolSize}` 
     } else {
       url = `mongodb://${host}:${port}/${database}`

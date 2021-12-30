@@ -41,6 +41,7 @@ module.exports = {
       port: parseInt(process.env.TMS_TRACE_MONGODB_PORT) || 27017,
       database: process.env.TMS_TRACE_MONGODB_DATABASE || 'tms-api-gw-jh',
       maxPoolSize: parseInt(process.env.TMS_TRACE_MONGODB_MAXPOOLSIZE) || 100,
+      authSource: process.env.TMS_TRACE_MONGODB_AUTHSOURCE || "admin",
       events: process.env.TMS_TRACE_MONGO_EVENTS ? JSON.parse(process.env.TMS_TRACE_MONGO_EVENTS) : ["recvReq", "sendReq", "response", "checkpoint"]
     },
     mongodb_callticket: {
@@ -51,6 +52,7 @@ module.exports = {
       host: process.env.TMS_TRACE_MONGODB_HOST || host,
       port: parseInt(process.env.TMS_TRACE_MONGODB_PORT) || 27017,
       database: process.env.TMS_TRACE_MONGODB_DATABASE || 'tms-api-gw-jh',
+      authSource: process.env.TMS_TRACE_MONGODB_AUTHSOURCE || "admin",
       maxPoolSize: parseInt(process.env.TMS_TRACE_MONGODB_MAXPOOLSIZE) || 100,
     },
     http: {
@@ -69,6 +71,7 @@ module.exports = {
       host: process.env.TMS_QUOTA_MONGODB_HOST || host,
       port: parseInt(process.env.TMS_QUOTA_MONGODB_PORT) || 27017,
       database: process.env.TMS_QUOTA_MONGODB_DATABASE || 'tms-api-gw-jh',
+      authSource: process.env.TMS_QUOTA_MONGODB_AUTHSOURCE || "admin",
       maxPoolSize: parseInt(process.env.TMS_TRACE_MONGODB_MAXPOOLSIZE) || 100
     },
     rule_all: {
@@ -170,6 +173,7 @@ module.exports = {
         host: process.env.TMS_CTRL_MONGODB_HOST || host,
         port: parseInt(process.env.TMS_CTRL_MONGODB_PORT) || 27017,
         database: process.env.TMS_CTRL_MONGODB_DATABASE || 'tms-api-gw-jh',
+        authSource: process.env.TMS_CTRL_MONGODB_AUTHSOURCE || "admin",
         user: process.env.TMS_CTRL_MONGODB_USER || false,
         password: process.env.TMS_CTRL_MONGODB_PASSWORD || false,
         maxPoolSize: parseInt(process.env.TMS_CTRL_MONGODB_MAXPOOLSIZE) || 100,
