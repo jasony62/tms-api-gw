@@ -3,7 +3,7 @@ const _ = require("lodash")
 module.exports = function(req){
 
   const item = {
-    custid: "custInfo.data.cust_id",
+    custid: "clientInfo.data.cust_id",
     api: "originUrlObj.pathname",
     numberA: "originUrlObj.query.access_token"
   }

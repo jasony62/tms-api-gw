@@ -18,24 +18,25 @@ MongoContext.connect = function(url) {
   const mongoose = require('mongoose')
 
   return mongoose
-    .connect(url, {
+    .createConnection(url, {
       useNewUrlParser: true,
       useUnifiedTopology: true
     })
-    .then(() => {
-      mongoose.connection.on('error', err => {
+    .catch(err => {
+      const msg = `连接'${url}'失败：${err.message}`
+      logger.error(msg)
+      return Promise.reject(new MongoError(msg))
+    })
+    .then((mongoObj) => {
+      mongoObj.on('error', err => {
         const msg = `mongodb操作错误：${err.message}`
         logger.error(msg)
         throw new MongoError(msg)
       })
 
       logger.info(`连接'${url}'成功`)
-      return mongoose
-    })
-    .catch(err => {
-      const msg = `连接'${url}'失败：${err.message}`
-      logger.error(msg)
-      return Promise.reject(new MongoError(msg))
+      mongoObj.Schema = mongoose.Schema
+      return mongoObj
     })
 }
 MongoContext.ins = (function() {
