@@ -68,23 +68,40 @@ let proxyRules = new HttpProxyRules({
 
 配额控制功能
 ```
-quota: {
-  enable: true,
-  mongodb: {
-    host,
-    port: 27017,
-    database: 'tms-api-gw'
-  },
-  rule: { // 配额规则
-    rateLimit: { // 限制访问次数
-      minute: { // 按分钟
-        limit: 100 // 每分钟最多100次
+  quota: {
+    enable: true,
+    mongodb: {
+      host,
+      port: 27017,
+      database: 'tms-api-gw'
+    },
+    rule_test: "./lib/quota/test.js", //支持指定方法返回  {itemId:"/api/a:123",rateLimit:{rate: "0 * * * * ?",limit: 0},attachedField:{custid:"123"}}
+    statistical_Day: {
+      type: "object",
+      item: {
+        custid: "headers.x-request-client",
+        api: "originUrlObj.pathname"
+      },
+      rateLimit: {
+        // rate: '0 * * * * ?',
+        rate: null,
+        limit: 0
       }
-    }
+    },
+    http_test: {
+      type: "http",
+      url: "http://localhost/api",
+      parameter: {
+        url: "originUrl",
+        headers: "headers",
+        client: "clientInfo"
+      },
+      itemIdField: "result.0.id",
+      rateLimitField: "result.0.rateLimit",
+      attachedField: "result.0.attachedField"
+    },
+    default: ["statistical_Day"]
   },
-  rule2: "./lib/quota/test.js", // 支持加载自定义文件
-  default: [] // 设置默认，没有则没有配额限制
-}
 ```
 ##  API 服务
 
