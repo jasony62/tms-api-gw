@@ -93,6 +93,7 @@ async function _eventTrace(req, ctx, TraceObj, event, datas, options = {}) {
           } else {
             const rstBody = await options.getResBody.getBody()
             datas.responseBody = rstBody
+            logger.debug("response", requestId, datas.statusCode, datas.statusMessage, datas.responseHeaders, datas.responseBody)
             await targetTc.mongoose.updateOne( where, { $set: datas }, {upsert: true} )
           }
         } else {

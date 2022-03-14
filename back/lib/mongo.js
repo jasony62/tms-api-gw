@@ -25,13 +25,13 @@ MongoContext.connect = function(url) {
     .catch(err => {
       const msg = `连接'${url}'失败：${err.message}`
       logger.error(msg)
-      return Promise.reject(new MongoError(msg))
+      return Promise.reject(new MongoError("mongodb链接失败"))
     })
     .then((conn) => {
       conn.on('error', err => {
         const msg = `mongodb操作错误：${err.message}`
         logger.error(msg)
-        throw new MongoError(msg)
+        throw new MongoError("mongodb操作错误")
       })
 
       logger.info(`连接'${url}'成功`)
