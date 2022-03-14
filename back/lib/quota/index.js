@@ -3,6 +3,9 @@ const logger = log4js.getLogger('tms-api-gw')
 const _ = require("lodash")
 const fs = require("fs")
 const PATH = require("path")
+const cronParser = require('cron-parser')
+const axios = require('axios')
+const adapter = require('axios/lib/adapters/http')
 
 class Quota {
   constructor(ModelDay, ModelArchive, quotaRulesMap, defaultQuota) {
@@ -17,7 +20,7 @@ class Quota {
    */
   getReqInfo(req) {
     const clientId = req.headers['x-request-client']
-    const api = require('url').parse(req.originUrl).pathname
+    const api = req.originUrlObj.pathname
     const requestAt = req.headers['x-request-at']
     const targetRule = req.targetRule
 
@@ -27,13 +30,102 @@ class Quota {
    *  
    */
   _getReqQuotaRule(targetRule) {
-    let getReqTargetRuless
+    let getReqTargetRules
     if (targetRule.quota && Array.isArray(targetRule.quota)) {
-      getReqTargetRuless = targetRule.quota
+      getReqTargetRules = targetRule.quota
     } else {
-      getReqTargetRuless = this.defaultQuota
+      getReqTargetRules = this.defaultQuota
     }
-    return getReqTargetRuless
+    return getReqTargetRules
+  }
+  /**
+   *  
+   */
+  async _getItemRule(req, quotaConfig, quotaName) {
+    if (req['gw_quota'] && req['gw_quota'][quotaName]) {
+      return req['gw_quota'][quotaName]
+    }
+
+    const { clientId, api } = this.getReqInfo(req)
+
+    if (typeof quotaConfig === "string") {
+      quotaConfig = {
+        type: "file",
+        path: quotaConfig
+      }
+    }
+    if (Object.prototype.toString.call(quotaConfig) !== "[object Object]") {
+      return Promise.reject({msg: `解析错误：控制规则不是一个object`})
+    }
+    
+    let itemId = null, rateLimit = null, attachedField = null
+    if (quotaConfig.type === "object") {
+      if (quotaConfig.item) {
+        let items = []
+        attachedField = {}
+        for (const itemKey in quotaConfig.item) {
+          const val = _.get(req, quotaConfig["item"][itemKey], "")
+          attachedField[itemKey] = val
+          items.push(val)
+        }
+        itemId = items.join(":")
+      }
+      if (quotaConfig.rateLimit) rateLimit = quotaConfig.rateLimit
+    } else if (quotaConfig.type === "http") {
+      let postBody = {}
+      for (const key in quotaConfig.parameter) {
+        postBody[key] = _.get(req, quotaConfig.parameter[key])
+      }
+      let options = { adapter }
+      options.timeout = quotaConfig.timeout || 1000
+      options.maxBodyLength = Infinity
+      options.maxContentLength = Infinity
+      const instance = axios.create(options)
+      await instance
+        .post(`${quotaConfig.url}`, postBody)
+        .then( res => {
+          if (!res.data || res.data.code !== 0) {
+            let errMsg = "返回异常"
+            if (res.data && res.data.msg) errMsg = res.data.msg
+            return Promise.reject({ msg: errMsg })
+          }
+          const item = res.data
+          itemId = _.get(item, quotaConfig.itemIdField, null)
+          rateLimit = _.get(item, quotaConfig.rateLimitField, null)
+          attachedField = _.get(item, quotaConfig.attachedField, null)
+        })
+        .catch( err => {
+          let msg = err.msg ? err.msg : err.toString()
+          logger.debug("quota item", req.headers['x-request-id'], err)
+          return Promise.reject({ msg })
+        })
+    } else if (quotaConfig.type === "file") { // {itemId:****,rateLimit:****}
+      const quoPath = PATH.resolve(quotaConfig.path)
+      if (fs.existsSync(quoPath)) {
+        const rst = require(quoPath)(req)
+        itemId = rst.itemId
+        if (rst.rateLimit) rateLimit = rst.rateLimit
+        if (rst.attachedField) attachedField = rst.attachedField
+      }
+    }
+
+    if (!itemId) { // 默认值
+      itemId = `${clientId}:${api}`
+    }
+    if (!attachedField) { // 默认值
+      attachedField = { clientId, api }
+    }
+  
+    const returnData = { id: itemId, rateLimit, attachedField }
+    // 避免重复请求
+    if (req.gw_quota) {
+      req['gw_quota'][quotaName] = returnData
+    } else {
+      req['gw_quota'] = {}
+      req['gw_quota'][quotaName] = returnData
+    }
+
+    return returnData
   }
   /**
    * 记录当天数据
@@ -43,41 +135,43 @@ class Quota {
    * @param {*} res
    */
   async logDay(proxyRes, req, res) {
-    const { clientId, api, requestAt } = this.getReqInfo(req)
-
-    const doc = await this.modelDay.findOne({ clientId, api })
-    if (doc) {
-      let { minute = 0, hour = 0, day = 0 } = doc
-      let oLatestAt = new Date(doc.latestAt)
-      let oRequestAt = new Date(requestAt)
-      oLatestAt.setSeconds(0, 0)
-      oRequestAt.setSeconds(0, 0)
-      let diff = oRequestAt - oLatestAt
-      if (diff < 60000) {
-        minute++
-        hour++
-        day++
-      } else if (diff < 3600000) {
-        minute = 1
-        hour++
-        day++
-      } else if (diff < 86400000) {
-        minute = hour = 1
-        day++
-      } else {
-        minute = hour = day = 1
+    const { clientId, api, requestAt, targetRule } = this.getReqInfo(req)
+    const quotaRules = this._getReqQuotaRule(targetRule)
+    for (const quotaRule of quotaRules) {
+      const quotaConfig = this.quotaRulesMap.get(quotaRule)
+       // 获取分类id
+      const item = await this._getItemRule(req, quotaConfig, quotaRule)
+      if (!item.rateLimit || !item.rateLimit.rate) {
+        continue
       }
 
-      await doc.updateOne({ $set: { latestAt: requestAt, minute, hour, day } })
-    } else {
-      await this.modelDay.create({
-        clientId,
-        api,
-        latestAt: requestAt,
-        minute: 1,
-        hour: 1,
-        day: 1
-      })
+      const itemId = item.id
+      const rateLimit = item.rateLimit
+      if (!rateLimit.rate) {
+        return Promise.reject({msg: `配额统计规则配置错误`})
+      }
+
+      // 获取下一个时间节点
+      const interval = cronParser.parseExpression(rateLimit.rate)
+      const rateNextTime = interval.next().getTime()
+
+      const doc = await this.modelDay.findOne({ itemId })
+      if (doc) {
+        if (rateNextTime === doc.rateNextTime) {
+          await doc.updateOne({ $set: { latestAt: requestAt }, $inc: { count: 1 } })
+        } else {
+          await doc.updateOne({ $set: { latestAt: requestAt, rateNextTime, count: 1 } })
+        }
+      } else {
+        await this.modelDay.create({
+          itemId,
+          latestAt: requestAt,
+          rateNextTime,
+          rateLimit,
+          count: 1
+        })
+      }
+
     }
   }
   /**
@@ -88,18 +182,27 @@ class Quota {
    * @param {*} res
    */
   async logArchive(proxyRes, req, res) {
-    const { clientId, api, requestAt } = this.getReqInfo(req)
+    const { requestAt, targetRule } = this.getReqInfo(req)
+    const quotaRules = this._getReqQuotaRule(targetRule)
 
-    const oRequestAt = new Date(requestAt)
-    const year = oRequestAt.getFullYear()
-    const month = oRequestAt.getMonth() + 1
-    const day = oRequestAt.getDate()
+    for (const quotaRule of quotaRules) {
+      const quotaConfig = this.quotaRulesMap.get(quotaRule)
+       // 获取分类id
+      const item = await this._getItemRule(req, quotaConfig, quotaRule)
+      const itemId = item.id
+      const attachedField = item.attachedField
 
-    await this.modelArchive.updateOne(
-      { clientId, api, year, month, day },
-      { $set: { latestAt: requestAt }, $inc: { count: 1 } },
-      { upsert: true }
-    )
+      const oRequestAt = new Date(requestAt)
+      const year = oRequestAt.getFullYear()
+      const month = oRequestAt.getMonth() + 1
+      const day = oRequestAt.getDate()
+
+      await this.modelArchive.updateOne(
+        { itemId, year, month, day },
+        { $set: { latestAt: requestAt, attachedField }, $inc: { count: 1 } },
+        { upsert: true }
+      )
+    }
   }
   /**
    * 检查配额，如果不满足抛出异常
@@ -109,37 +212,22 @@ class Quota {
   async check(req) {
     const { clientId, api, requestAt, targetRule } = this.getReqInfo(req)
     const reqQuotaRules = this._getReqQuotaRule(targetRule)
+
     for (const reqQuoRul of reqQuotaRules) {
-      const quoRul = this.quotaRulesMap.get(reqQuoRul)
-      let rule
-      if (Object.prototype.toString.call(quoRul) === "[object Object]") {
-        rule = Object.assign({}, quoRul)
-      } else if (typeof quoRul === "string") {
-        const quoPath = PATH.resolve(quoRul)
-        if (fs.existsSync(quoPath)) {
-          const r = require(quoPath)(req)
-          rule = Object.assign({}, r)
-        }
-      }
-      if (Object.prototype.toString.call(rule) !== "[object Object]") {
-        return Promise.reject({msg: `解析错误：控制规则不是一个object`})
-      }
+      const quoConfig = this.quotaRulesMap.get(reqQuoRul)
 
-      let minuLimit = _.get(rule, "rateLimit.minute.limit", null)
-      minuLimit = +minuLimit
-      if (minuLimit < 1) continue
+      const { id: itemId, rateLimit } = await this._getItemRule(req, quoConfig, reqQuoRul)
 
-      const doc = await this.modelDay.findOne({ clientId, api })
+      let limit = _.get(rateLimit, "limit", 0)
+      limit = +limit
+      if (limit < 1) continue
+
+      const doc = await this.modelDay.findOne({ itemId })
       if (doc) {
-        let oLatestAt = new Date(doc.latestAt)
-        let oRequestAt = new Date(requestAt)
-        oLatestAt.setSeconds(0, 0)
-        oRequestAt.setSeconds(0, 0)
-        let diff = oRequestAt - oLatestAt
-        if (diff < 60000) {
-          if (minuLimit <= doc.minute) {
-            logger.warn(`quota check minuLimit || ${req.headers['x-request-id']} || ${req.originUrl} || ${new Date() * 1 - req.headers['x-request-at']}`, `api 执行流量控制，限制次数为[${minuLimit}]，周期为[分]，当前次数[${doc.minute}]`)
-            return Promise.reject({msg: `api 执行流量控制，限制次数为[${minuLimit}]，周期为[分]，当前次数 大于 ${minuLimit}`})
+        if (requestAt < doc.rateNextTime) {
+          if (doc.count >= limit) {
+            logger.warn(`quota check minuLimit || ${req.headers['x-request-id']} || ${req.originUrl} || ${new Date() * 1 - req.headers['x-request-at']}`, `API 执行流量控制, 限制次数为[${limit}], 周期[${rateLimit.rate}], 请在【${doc.rateNextTime - requestAt}ms】后再次尝试`)
+            return Promise.reject({msg: `API 执行流量控制, 限制次数为[${limit}], 周期[${rateLimit.rate}], 请在【${doc.rateNextTime - requestAt}ms】后再次尝试`})
           }
         }
       }
@@ -152,12 +240,11 @@ class Quota {
 Quota.createModelDay = function(mongoose) {
   const schema = new mongoose.Schema(
     {
-      clientId: String,
-      api: String,
+      itemId: String,
+      count: Number,
       latestAt: Number,
-      minute: Number,
-      hour: Number,
-      day: Number
+      rateNextTime: Number,
+      rateLimit: { type: Object, default: {} }
     },
     { collection: 'counter_day' }
   )
@@ -169,8 +256,8 @@ Quota.createModelDay = function(mongoose) {
 Quota.createModelArchive = function(mongoose) {
   const schema = new mongoose.Schema(
     {
-      clientId: String,
-      api: String,
+      itemId: String,
+      attachedField: { type: Object, default: {} },
       latestAt: Number,
       year: Number,
       month: Number,

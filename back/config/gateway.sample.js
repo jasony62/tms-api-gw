@@ -62,15 +62,31 @@ module.exports = {
       port: 27017,
       database: 'tms-api-gw'
     },
-    rule1: {
+    rule_test: "./lib/quota/test.js",
+    statistical_Day: {
+      type: "object",
+      item: {
+        custid: "headers.x-request-client",
+        api: "originUrlObj.pathname"
+      },
       rateLimit: {
-        minute: {
-          limit: 0
-        }
+        rate: null,
+        limit: 0
       }
     },
-    rule2: "./lib/quota/test.js",
-    default: []
+    http_test: {
+      type: "http",
+      url: "http://localhost/api",
+      parameter: {
+        url: "originUrl",
+        headers: "headers",
+        client: "clientInfo"
+      },
+      itemIdField: "result.0.id",
+      rateLimitField: "result.0.rateLimit",
+      attachedField: "result.0.attachedField"
+    },
+    default: ["statistical_Day"]
   },
   auth: {
     enable: false,
@@ -90,6 +106,11 @@ module.exports = {
   transformRequest: { // 支持在转发请求前修改请求
     enable: false,
     getToken: "./lib/transformRequest/*.js", // ‘./*.js’ or function() {}
+    default: []
+  },
+  transformResponse: {
+    enable: false,
+    test_ase: "./lib/transformResponse/test_ase.js",
     default: []
   },
   pushMessage: { // sendMessage

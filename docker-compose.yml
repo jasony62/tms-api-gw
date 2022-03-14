@@ -10,7 +10,8 @@ services:
     container_name: jh-back
     #environment:
       # 网关端口号
-      ## - TMS_APP_PORT=6789
+      ## - TMS_APP_PORT=3000
+      ## - TMS_APP_CTRLPORT=3001
       # 转发规则 
       ### auth 鉴权 ["http","httpPortal","httpService","httpYz","noauth"] 默认 ["http"]
       ####   http 默认方式 去 TMS_AUTH_HTTP_URL 地址里去校验token 失败时返回statusCode: 401 body: 没有找到和access_token匹配的数据（text/plain; charset=utf-8）除了鉴权以外，还会判断客户账号上的标签，并用标签进行分流。标签取值地方由 TMS_AUTH_HTTP_CLIENTLABELFIELD 变量决定
@@ -84,3 +85,9 @@ services:
       ### - TMS_APP_SHORTURL_PREFIX=/s  短链接的前缀
       ### - TMS_METRICS_ENABLE=true  是否开启指标服务
       ### - TMS_METRICS_SLOWQUERYTIMEOUT=1000  指标服务中记录慢接口的依据，大于此时间后的接口记为慢接口 单位 毫秒
+      # 是否开启响应拦截器
+      ## - TMS_TRACEFORNRES_ENABLE=true
+    restart: always
+    ports:
+      - '3190:3000'
+      - '3191:3001'

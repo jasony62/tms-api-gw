@@ -50,7 +50,7 @@ Config.ins = (function () {
   let _ins
   return async function (reload = "N") {
     if (_ins && reload === "N") return _ins
-    const { port, proxy, trace, quota, auth, transformRequest, pushMessage, API } = loadConfig("gateway", {}, "Y")
+    const { port, proxy, trace, quota, auth, transformRequest, transformResponse, pushMessage, API } = loadConfig("gateway", {}, "Y")
     _ins = new Config(port, proxy)
     if (trace && (trace.enable === undefined || trace.enable === true))
       _ins.trace = trace
@@ -60,6 +60,8 @@ Config.ins = (function () {
       _ins.auth = auth
     if (transformRequest && (transformRequest.enable === undefined || transformRequest.enable === true))
       _ins.transformRequest = transformRequest
+    if (transformResponse && (transformResponse.enable === undefined || transformResponse.enable === true))
+      _ins.transformResponse = transformResponse
     if (pushMessage && (pushMessage.enable === undefined || pushMessage.enable === true))
       _ins.pushMessage = pushMessage
     if (API && API.enable === true) {
@@ -73,7 +75,8 @@ Config.ins = (function () {
     logger.info('日志服务：', _ins.trace ? '打开' : '否')
     logger.info('配额服务：', _ins.quota ? '打开' : '否')
     logger.info('认证服务：', _ins.auth ? '打开' : '否')
-    logger.info('转换请求服务：', _ins.transformRequest ? '打开' : '否')
+    logger.info('请求拦截服务：', _ins.transformRequest ? '打开' : '否')
+    logger.info('响应拦截服务：', _ins.transformResponse ? '打开' : '否')
     logger.info('消息推送服务：', _ins.pushMessage ? '打开' : '否')
     logger.info('API服务：', _ins.API ? '打开' : '否')
     logger.info('API-监控服务：', _ins.API && _ins.API.metrics ? '打开' : '否')
@@ -126,6 +129,11 @@ Context.ins = (function() {
       const transformRequest = require('./transformRequest')(config.transformRequest)
       ctx.transformRequest = transformRequest
     }
+    /* transformResponse */
+    if (config.transformResponse) {
+      const transformResponse = require('./transformResponse')(config.transformResponse)
+      ctx.transformResponse = transformResponse
+    }
     /* pushMessage */
     if (config.pushMessage && config.pushMessage.redis) {
       const pushMsg = require('./pushMessage')
@@ -137,7 +145,6 @@ Context.ins = (function() {
       ctx.API = {
         config: config.API
       }
-      let _instanceCtr, _instanceMtr
       /* controller */
       if (config.API.controllers) {
         const ctr = require('./API/controllers')
@@ -179,6 +186,11 @@ Context.hotUpdate = async function() {
   if (!config.transformRequest && ctx.transformRequest) {
     delete ctx.config.transformRequest
     delete ctx.transformRequest
+  }
+  /* transformResponse */
+  if (!config.transformResponse && ctx.transformResponse) {
+    delete ctx.config.transformResponse
+    delete ctx.transformResponse
   }
   /* pushMessage */
   if (!config.pushMessage && ctx.pushMessage) {

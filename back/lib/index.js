@@ -5,6 +5,22 @@ const uuid = require('uuid')
 const { Context } = require('./context')
 const http = require('http')
 const _ = require("lodash")
+const _url = require('url')
+
+function ip(req) {
+
+  const clientIP = req.headers['x-real-ip'] || 
+    req.headers['x-forwarded-for'] || 
+    req.connection.remoteAddress ||
+    req.socket.remoteAddress ||
+    req.connection.socket.remoteAddress || 
+    req.ip || ''
+
+  let ip = clientIP.match(/\d+.\d+.\d+.\d+/)
+  ip = ip ? ip.join('.') : null
+
+  return ip
+}
 
 class Gateway {
   constructor(ctx) {
@@ -31,8 +47,54 @@ class Gateway {
       this.ctx.emitter.emit('proxyReq', proxyReq, req, res, options, this.ctx)
     })
     // 处理获得的响应
-    proxy.on('proxyRes', (proxyRes, req, res) => {
-      this.ctx.emitter.emit('proxyRes', proxyRes, req, res, this.ctx)
+    proxy.on('proxyRes', async (proxyRes, req, res) => {
+      const disposeResponse = { // 获取响应dody
+        body: null,
+        statusCode: proxyRes.statusCode,
+        headers: proxyRes.headers,
+        getBody: async function() {
+          if (this.body !== null) return this.body
+          return new Promise((resolve, reject) => {
+            let rst = []
+            proxyRes.on('data', chunk => {
+              rst.push(chunk)
+            })
+            proxyRes.on('end', async () => {
+              rst = Buffer.concat(rst).toString()
+              this.setBody(rst)
+              return resolve(rst)
+            })
+          })
+        },
+        setBody: function(data) {
+          this.body = data
+        },
+        setStatusCode: function(code) {
+          this.statusCode = code
+        },
+        setHeader: function(header) {
+          this.headers = header
+        },
+        end: function() {
+          res.writeHead(this.statusCode, this.headers)
+          res.write(this.body)
+          return res.end()
+        }
+      }
+
+      this.ctx.emitter.emit('proxyRes', proxyRes, req, res, this.ctx, disposeResponse)
+
+      // 响应拦截器
+      if (this.ctx.transformResponse) {
+        try {
+          await this.ctx.transformResponse.check(req, disposeResponse)
+          this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "transformResponse")
+        } catch (err) {
+          this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "transformResponse", err)
+          res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' })
+          return res.end(err.msg)
+        }
+      }
     })
     // 启动http服务
     const app = http.createServer(async (req, res) => {
@@ -41,6 +103,10 @@ class Gateway {
         req.headers['x-request-id'] = uuid()
       }
       req.headers['x-request-at'] = new Date() * 1
+
+      // 获取真实ip地址
+      const clientIP = ip(req)
+      req.headers['x-request-ip'] = clientIP
 
       // 获取转发规则
       const getTargetRst = await this.rules.getTargetRules(req)
@@ -54,6 +120,13 @@ class Gateway {
         req.url = getTargetRst.newReqUrl
         req.urlPrefix = getTargetRst.urlPrefix
         req.originUrl = getTargetRst.originUrl
+        req.originUrlObj = _.pick(_url.parse(req.originUrl, true), [
+          'protocol',
+          'hostname',
+          'port',
+          'pathname',
+          'query'
+        ])
       }
 
       // 记录收到请求的原始信息
@@ -70,6 +143,10 @@ class Gateway {
           req.headers['x-request-client'] = clientId
           this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "auth")
         } catch (err) {
+          if (err.clientId) clientId = err.clientId
+          if (err.clientId) req.headers['x-request-client'] = clientId
+          if (err.clientInfo) req.clientInfo = err.clientInfo
+          if (err.clientLabel) clientLabel = err.clientLabel
           this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "auth", err)
           res.writeHead(401, { 'Content-Type': 'text/plain; charset=utf-8' })
           return res.end(err.msg)
@@ -84,6 +161,13 @@ class Gateway {
         return res.end('Not found target')
       } else {
         req.targetUrl = target + req.url
+        req.targetUrlObj = _.pick(_url.parse(req.targetUrl, true), [
+          'protocol',
+          'hostname',
+          'port',
+          'pathname',
+          'query'
+        ])
       }
 
       // 检查配额
@@ -101,7 +185,7 @@ class Gateway {
       // 代理参数
       let proxyOptions = {}
 
-      // 转换请求
+      // 请求拦截器
       if (this.ctx.transformRequest) {
         try {
           const rst = await this.ctx.transformRequest.check(clientId, req)
@@ -117,6 +201,10 @@ class Gateway {
           res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' })
           return res.end(err.msg)
         }
+      }
+      // 响应拦截器
+      if (this.ctx.transformResponse) {
+        proxyOptions.selfHandleResponse = true
       }
       
       // 执行反向代理
