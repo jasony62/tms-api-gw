@@ -1,7 +1,7 @@
 const fs = require("fs")
 const PATH = require("path")
 
-class HttpTransformReq {
+class HttpTransformRes {
   constructor(config, transformInstanceMap) {
     this.config = config
     this.transformInstanceMap = transformInstanceMap
@@ -9,10 +9,10 @@ class HttpTransformReq {
   /**
    * 
    */
-  getTargetAuth(targetRule) {
+  getTargetTransform(targetRule) {
     let targetTransforms
-    if (targetRule.transformRequest && Array.isArray(targetRule.transformRequest)) {
-      targetTransforms = targetRule.transformRequest
+    if (targetRule.transformResponse && Array.isArray(targetRule.transformResponse)) {
+      targetTransforms = targetRule.transformResponse
     } else {
       targetTransforms = this.config.default
     }
@@ -23,9 +23,17 @@ class HttpTransformReq {
    * @param {*} req 
    * @returns 
    */
-  async check(clientId, req) {
-    const targetTransforms = this.getTargetAuth(req.targetRule)
-    let returData = {}
+  async check(req, disposeResponse) {
+    const targetTransforms = this.getTargetTransform(req.targetRule)
+    const resBody = await disposeResponse.getBody()
+    const resStatusCode = await disposeResponse.statusCode
+    const resHeaders = await disposeResponse.headers
+
+    let returnData = {
+      statusCode: resStatusCode, 
+      headers: resHeaders, 
+      body: resBody
+    }
     for (const t of targetTransforms) {
       const tarArf = this.transformInstanceMap.get(t)
       let func
@@ -38,13 +46,18 @@ class HttpTransformReq {
         func = tarArf
       }
       if (typeof func === "function") {
-        await func(clientId, req, returData)
-        if (Object.prototype.toString.call(returData) !== '[object Object]') {
-          return Promise.reject({msg: "请求拦截器 返回的不是一个object"})
+        await func(req, returnData)
+        if (Object.prototype.toString.call(returnData) !== '[object Object]') {
+          return Promise.reject({msg: "响应拦截器 返回的不是一个Object"})
         }
       }
     }
-    return returData
+
+    if (returnData.statusCode) disposeResponse.setStatusCode(parseInt(returnData.statusCode))
+    if (returnData.headers) disposeResponse.setHeader(returnData.headers)
+    if (returnData.body) disposeResponse.setBody(returnData.body)
+    
+    return disposeResponse.end()
   }
 }
 
@@ -61,7 +74,7 @@ module.exports = (function() {
       transformInstanceMap.set(key, val)
     }
 
-    instance = new HttpTransformReq(config, transformInstanceMap)
+    instance = new HttpTransformRes(config, transformInstanceMap)
 
     return instance
   }

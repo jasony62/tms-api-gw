@@ -18,29 +18,30 @@ MongoContext.connect = function(url) {
   const mongoose = require('mongoose')
 
   return mongoose
-    .connect(url, {
+    .createConnection(url, {
       useNewUrlParser: true,
       useUnifiedTopology: true
-    })
-    .then(() => {
-      mongoose.connection.on('error', err => {
-        const msg = `mongodb操作错误：${err.message}`
-        logger.error(msg)
-        throw new MongoError(msg)
-      })
-
-      logger.info(`连接'${url}'成功`)
-      return mongoose
     })
     .catch(err => {
       const msg = `连接'${url}'失败：${err.message}`
       logger.error(msg)
-      return Promise.reject(new MongoError(msg))
+      return Promise.reject(new MongoError("mongodb链接失败"))
+    })
+    .then((conn) => {
+      conn.on('error', err => {
+        const msg = `mongodb操作错误：${err.message}`
+        logger.error(msg)
+        throw new MongoError("mongodb操作错误")
+      })
+
+      logger.info(`连接'${url}'成功`)
+      conn.Schema = mongoose.Schema
+      return conn
     })
 }
 MongoContext.ins = (function() {
   let _instances = new Map()
-  return async function({ user, password, host, port, database }) {
+  return async function({ user, password, host, port, database, maxPoolSize, authSource = "admin" }) {
     if (typeof host !== 'string') {
       let msg = '没有指定mongodb的主机地址'
       logger.error(msg)
@@ -58,10 +59,13 @@ MongoContext.ins = (function() {
     }
 
     let url
+    maxPoolSize = +maxPoolSize
     if (user && typeof user === "string" && password && typeof password === "string") {
-      url = `mongodb://${user}:${password}@${host}:${port}/${database}?authSource=admin`
+      url = `mongodb://${user}:${password}@${host}:${port}/${database}?authSource=${authSource}`
+      if (maxPoolSize > 5) url += `&maxPoolSize=${maxPoolSize}` 
     } else {
       url = `mongodb://${host}:${port}/${database}`
+      if (maxPoolSize > 5) url += `?maxPoolSize=${maxPoolSize}` 
     }
 
     if (_instances.has(url)) return _instances.get(url)
