@@ -70,6 +70,7 @@ module.exports = {
         api: "originUrlObj.pathname"
       },
       rateLimit: {
+        // rate: '0 * * * * ?',
         rate: null,
         limit: 0
       }
