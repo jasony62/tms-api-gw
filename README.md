@@ -14,7 +14,7 @@ tms-api-gw 是一个 api 网关，可以通过设置规则将外部 http 请求�
 
 # 业务规则
 
-在 config 目录下新建 gateway.js 文件，参考 gateway.sample.js 文件进行设置，gateway.local.js 为本地配置文件，其中的参数会覆盖gateway.js。
+在 config 目录下新建 gateway.js 文件，参考 gateway.sample.js 文件进行设置，gateway.local.js 为本地配置文件，其中的参数会覆盖 gateway.js。
 
 ## 路由规则（proxy.rules）
 
@@ -32,7 +32,7 @@ let proxyRules = new HttpProxyRules({
 })
 ```
 
-规则对象包含一组键-值对，它们将 regex 支持的 url 路径映射到目标路由。模块只尝试用访问的 url 路径，而不是整个 url，进行规则匹配。目标路由必须包含协议(如 http)和 FQDN。您可以在构造规则时使用捕获组 (e.g. '/posts/(\d+)/)。这种情况下，目标路径中的$1将被替换为来自第一个捕获组的值，$2 替换为第二个捕获组的值，依此类推。
+规则对象包含一组键-值对，它们将 regex 支持的 url 路径映射到目标路由。模块只尝试用访问的 url 路径，而不是整个 url，进行规则匹配。目标路由必须包含协议(如 http)和 FQDN。您可以在构造规则时使用捕获组 (e.g. '/posts/(\d+)/)。这种情况下，目标路径中的$1 将被替换为来自第一个捕获组的值，$2 替换为第二个捕获组的值，依此类推。
 
 参考：https://www.npmjs.com/package/http-proxy-rules
 
@@ -67,6 +67,7 @@ let proxyRules = new HttpProxyRules({
 | counter_archive | 记录用户（clientId）在某年（year），某月（month），某日（day）的调用某 api 的累计次数。一个 clientId 和 api 的组合在每次发生调用的天产生 1 条数据。          |
 
 配额控制功能
+
 ```
   quota: {
     enable: true,
@@ -103,14 +104,34 @@ let proxyRules = new HttpProxyRules({
     default: ["statistical_Day"]
   },
 ```
-##  API 服务
 
-tms-api-gw 管理端，需要另起端口，支持自定义接口，以及为Prometheus提供指标
+## API 服务
+
+tms-api-gw 管理端，需要另起端口，支持自定义接口，以及为 Prometheus 提供指标
+
+建立短链接
+
+```
+curl -X POST -H "Content-Type: application/json" "http://localhost:3001/apis/shorturl/encode" -d '{"url":"xxxx"}'
+```
+
+```json
+{
+  "msg": "正常",
+  "code": 0,
+  "result": {
+    "short_url": "http://localhost:5555/s/xShIx",
+    "short_url_code": "xShIx",
+    "url": "xxxxxxx",
+    "expiration": 0
+  }
+}
+```
 
 # 配置文件热更新
 
-如果需要更新配置文件但不想重启服务，可以通过更改gateway.js 或 gateway.local.js ，然后调用API http://localhost:3457/admin/hotUpdate/config
-即可。（需开启API服务、API-接口服务。暂支持转发规则的修改，以及认证、配额、日志登服务的关闭操作）
+如果需要更新配置文件但不想重启服务，可以通过更改 gateway.js 或 gateway.local.js ，然后调用 API http://localhost:3457/admin/hotUpdate/config
+即可。（需开启 API 服务、API-接口服务。暂支持转发规则的修改，以及认证、配额、日志登服务的关闭操作）
 
 # 运行示例
 

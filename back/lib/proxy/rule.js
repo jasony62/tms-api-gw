@@ -12,7 +12,7 @@ function HttpProxyRules(ctx) {
 /**
  * 匹配对应的转发规则
  */
- HttpProxyRules.prototype.getTargetRules = async function(req) {
+HttpProxyRules.prototype.getTargetRules = async function (req) {
   let rules = this.proxy.rules
   let path = req.url
   let pathPrefixRe
@@ -21,7 +21,7 @@ function HttpProxyRules(ctx) {
   let pathEndsWithSlash
   let targetRule
   let newReqUrl
-  
+
   for (let pathPrefix in rules) {
     if (!rules.hasOwnProperty(pathPrefix)) continue
     if (pathPrefix[pathPrefix.length - 1] === '/') {
@@ -39,20 +39,23 @@ function HttpProxyRules(ctx) {
       urlPrefix = pathEndsWithSlash ? testPrefixMatch[0] : testPrefixMatch[1]
       newReqUrl = path.replace(urlPrefix, '')
       targetRule = rules[pathPrefix]
-      if (typeof targetRule === "string") {
+      if (typeof targetRule === 'string') {
         targetRule = { target: targetRule }
       }
       break
     }
   }
 
-  // 短链接 
+  // 短链接
   if (!targetRule && this.ctx.API && this.ctx.API.controllers) {
-    const { prefix: shorturl_prefix, host: shorturl_host } = this.ctx.API.controllers.config.shorturl
-    let url = path.substring(0, path.lastIndexOf("/"))
+    const { prefix: shorturl_prefix, host: shorturl_host } =
+      this.ctx.API.controllers.config.shorturl
+    let url = path.substring(0, path.lastIndexOf('/'))
     if (url === shorturl_prefix) {
-      const urlObj = new URL(path, "http://" + req.headers.host)
-      targetRule = await this.ctx.API.controllers.shorturl_decode(urlObj.pathname)
+      const urlObj = new URL(path, 'http://' + req.headers.host)
+      targetRule = await this.ctx.API.controllers.shorturl_decode(
+        urlObj.pathname
+      )
       if (targetRule) {
         targetRule.target = targetRule.target_url
         newReqUrl = urlObj.search
@@ -61,15 +64,18 @@ function HttpProxyRules(ctx) {
     }
   }
 
-  return { targetRule, urlPrefix, originUrl: path, newReqUrl}
- }
+  return { targetRule, urlPrefix, originUrl: path, newReqUrl }
+}
 
 /**
  * This function will modify the `req` object if a match is found.
  * We also return the new endpoint string if a match is found.
  * @param  {Object} req Takes in a `req` object.
  */
-HttpProxyRules.prototype.match = function match(targetRule, clientLabel = null) {
+HttpProxyRules.prototype.match = function match(
+  targetRule,
+  clientLabel = null
+) {
   let target = null
 
   if (Object.prototype.toString.call(targetRule) !== '[object Object]')
@@ -77,15 +83,14 @@ HttpProxyRules.prototype.match = function match(targetRule, clientLabel = null) 
 
   if (Array.isArray(targetRule.target)) {
     for (let tg of targetRule.target) {
-      if (tg.default === true) 
-        target = tg.url
+      if (tg.default === true) target = tg.url
 
       if (clientLabel && tg.label === clientLabel) {
         target = tg.url
         break
       }
     }
-  } else if (typeof targetRule.target === "string") {
+  } else if (typeof targetRule.target === 'string') {
     target = targetRule.target
   }
 

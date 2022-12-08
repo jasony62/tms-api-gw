@@ -4,17 +4,18 @@ const ProxyRules = require('./proxy/rule')
 const uuid = require('uuid')
 const { Context } = require('./context')
 const http = require('http')
-const _ = require("lodash")
+const _ = require('lodash')
 const _url = require('url')
 
 function ip(req) {
-
-  const clientIP = req.headers['x-real-ip'] || 
-    req.headers['x-forwarded-for'] || 
+  const clientIP =
+    req.headers['x-real-ip'] ||
+    req.headers['x-forwarded-for'] ||
     req.connection.remoteAddress ||
     req.socket.remoteAddress ||
-    req.connection.socket.remoteAddress || 
-    req.ip || ''
+    req.connection.socket.remoteAddress ||
+    req.ip ||
+    ''
 
   let ip = clientIP.match(/\d+.\d+.\d+.\d+/)
   ip = ip ? ip.join('.') : null
@@ -38,7 +39,7 @@ class Gateway {
     const proxy = httpProxy.createProxyServer()
     // 异常事件不处理
     proxy.on('error', (err, req, res) => {
-      this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "error", err)
+      this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, 'error', err)
       res.writeHead(502, { 'Content-Type': 'text/plain; charset=utf-8' })
       res.end(err.toString())
     })
@@ -48,15 +49,16 @@ class Gateway {
     })
     // 处理获得的响应
     proxy.on('proxyRes', async (proxyRes, req, res) => {
-      const disposeResponse = { // 获取响应dody
+      const disposeResponse = {
+        // 获取响应dody
         body: null,
         statusCode: proxyRes.statusCode,
         headers: proxyRes.headers,
-        getBody: async function() {
+        getBody: async function () {
           if (this.body !== null) return this.body
           return new Promise((resolve, reject) => {
             let rst = []
-            proxyRes.on('data', chunk => {
+            proxyRes.on('data', (chunk) => {
               rst.push(chunk)
             })
             proxyRes.on('end', async () => {
@@ -66,31 +68,51 @@ class Gateway {
             })
           })
         },
-        setBody: function(data) {
+        setBody: function (data) {
           this.body = data
         },
-        setStatusCode: function(code) {
+        setStatusCode: function (code) {
           this.statusCode = code
         },
-        setHeader: function(header) {
+        setHeader: function (header) {
           this.headers = header
         },
-        end: function() {
+        end: function () {
           res.writeHead(this.statusCode, this.headers)
           res.write(this.body)
           return res.end()
-        }
+        },
       }
 
-      this.ctx.emitter.emit('proxyRes', proxyRes, req, res, this.ctx, disposeResponse)
+      this.ctx.emitter.emit(
+        'proxyRes',
+        proxyRes,
+        req,
+        res,
+        this.ctx,
+        disposeResponse
+      )
 
       // 响应拦截器
       if (this.ctx.transformResponse) {
         try {
           await this.ctx.transformResponse.check(req, disposeResponse)
-          this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "transformResponse")
+          this.ctx.emitter.emit(
+            'checkpointReq',
+            req,
+            res,
+            this.ctx,
+            'transformResponse'
+          )
         } catch (err) {
-          this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "transformResponse", err)
+          this.ctx.emitter.emit(
+            'checkpointReq',
+            req,
+            res,
+            this.ctx,
+            'transformResponse',
+            err
+          )
           res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' })
           return res.end(err.msg)
         }
@@ -125,7 +147,7 @@ class Gateway {
           'hostname',
           'port',
           'pathname',
-          'query'
+          'query',
         ])
       }
 
@@ -141,13 +163,20 @@ class Gateway {
           clientLabel = authRst.clientLabel
           req.clientInfo = authRst.clientInfo
           req.headers['x-request-client'] = clientId
-          this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "auth")
+          this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, 'auth')
         } catch (err) {
           if (err.clientId) clientId = err.clientId
           if (err.clientId) req.headers['x-request-client'] = clientId
           if (err.clientInfo) req.clientInfo = err.clientInfo
           if (err.clientLabel) clientLabel = err.clientLabel
-          this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "auth", err)
+          this.ctx.emitter.emit(
+            'checkpointReq',
+            req,
+            res,
+            this.ctx,
+            'auth',
+            err
+          )
           res.writeHead(401, { 'Content-Type': 'text/plain; charset=utf-8' })
           return res.end(err.msg)
         }
@@ -166,7 +195,7 @@ class Gateway {
           'hostname',
           'port',
           'pathname',
-          'query'
+          'query',
         ])
       }
 
@@ -174,9 +203,16 @@ class Gateway {
       if (this.ctx.quota && clientId) {
         try {
           await this.ctx.quota.check(req)
-          this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "quota")
+          this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, 'quota')
         } catch (err) {
-          this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "quota", err)
+          this.ctx.emitter.emit(
+            'checkpointReq',
+            req,
+            res,
+            this.ctx,
+            'quota',
+            err
+          )
           res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' })
           return res.end(err.msg)
         }
@@ -190,14 +226,31 @@ class Gateway {
         try {
           const rst = await this.ctx.transformRequest.check(clientId, req)
           if (rst.target) target = rst.target
-          if ('POST' === req.method && rst.rawBody && typeof rst.rawBody === "string") {
+          if (
+            'POST' === req.method &&
+            rst.rawBody &&
+            typeof rst.rawBody === 'string'
+          ) {
             req.rawBody = rst.rawBody
-            req.headers["content-length"] = Buffer.byteLength(req.rawBody)
+            req.headers['content-length'] = Buffer.byteLength(req.rawBody)
             proxyOptions.buffer = streamify([req.rawBody])
           }
-          this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "transformRequest")
+          this.ctx.emitter.emit(
+            'checkpointReq',
+            req,
+            res,
+            this.ctx,
+            'transformRequest'
+          )
         } catch (err) {
-          this.ctx.emitter.emit('checkpointReq', req, res, this.ctx, "transformRequest", err)
+          this.ctx.emitter.emit(
+            'checkpointReq',
+            req,
+            res,
+            this.ctx,
+            'transformRequest',
+            err
+          )
           res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' })
           return res.end(err.msg)
         }
@@ -206,11 +259,16 @@ class Gateway {
       if (this.ctx.transformResponse) {
         proxyOptions.selfHandleResponse = true
       }
-      
+
       // 执行反向代理
       proxyOptions.target = target
-      proxy.web(req, res, proxyOptions)
-
+      let { target_url, redirect } = targetRule
+      if (target_url && redirect === true) {
+        res.writeHead(302, { Location: target_url })
+        res.end()
+      } else {
+        proxy.web(req, res, proxyOptions)
+      }
       // 复制请求
     })
     app.listen(this.port, () => {
@@ -222,17 +280,17 @@ class Gateway {
    */
   createAPI() {
     if (!this.ctx.API) {
-      return 
+      return
     }
     const APIContent = this.ctx.API
     const APIConfig = APIContent.config
-    const metricsPrefix = _.get(APIConfig, "router.metrics.prefix", null)
-    const ctrPrefix = _.get(APIConfig, "router.controllers.prefix", null)
+    const metricsPrefix = _.get(APIConfig, 'router.metrics.prefix', null)
+    const ctrPrefix = _.get(APIConfig, 'router.controllers.prefix', null)
 
     const parseBody = (req) => {
       return new Promise((resolve, reject) => {
         let body = ''
-        req.on('data', chunk => {
+        req.on('data', (chunk) => {
           body += chunk
         })
         req.on('end', () => {
@@ -242,17 +300,20 @@ class Gateway {
     }
 
     const app = http.createServer(async (req, res) => {
-      const getUrl = new URL(req.url, "http://" + req.headers.host)
+      const getUrl = new URL(req.url, 'http://' + req.headers.host)
       req.path = getUrl.pathname
-      if (req.method === "POST") {
+      if (req.method === 'POST') {
         req.body = await parseBody(req)
-        if (req.headers["content-type"] && req.headers["content-type"].indexOf("application/json") !== -1) {
+        if (
+          req.headers['content-type'] &&
+          req.headers['content-type'].indexOf('application/json') !== -1
+        ) {
           req.body = JSON.parse(req.body)
         }
       }
-
       if (metricsPrefix !== null && req.path.indexOf(metricsPrefix) === 0) {
-        if (!this.ctx.API || !this.ctx.API.metrics) { // 需要检查热更新时是否是否关闭API，所以需要用this.ctx.API
+        if (!this.ctx.API || !this.ctx.API.metrics) {
+          // 需要检查热更新时是否是否关闭API，所以需要用this.ctx.API
           res.writeHead(503, { 'Content-Type': 'text/plain; charset=utf-8' })
           return res.end('未开启监控服务')
         }
@@ -260,16 +321,18 @@ class Gateway {
         const metrics = await this.ctx.API.metrics.register.metrics()
         return res.end(metrics)
       } else if (ctrPrefix !== null && req.path.indexOf(ctrPrefix) === 0) {
-        if (!this.ctx.API || !this.ctx.API.controllers) { // 需要检查热更新时是否是否关闭API，所以需要用this.ctx.API
+        if (!this.ctx.API || !this.ctx.API.controllers) {
+          // 需要检查热更新时是否是否关闭API，所以需要用this.ctx.API
           res.writeHead(503, { 'Content-Type': 'text/plain; charset=utf-8' })
           return res.end('未开启接口服务')
         }
 
         await this.ctx.API.controllers.fnCtrl(req, res)
 
-        if (!res.hasHeader('Content-Type')) res.setHeader("Content-Type", "application/json;charset=utf-8")
-        if (!res.body) res.body = ""
-        if (typeof res.body !== "string") res.body = JSON.stringify(res.body)
+        if (!res.hasHeader('Content-Type'))
+          res.setHeader('Content-Type', 'application/json;charset=utf-8')
+        if (!res.body) res.body = ''
+        if (typeof res.body !== 'string') res.body = JSON.stringify(res.body)
         return res.end(res.body)
       } else {
         res.writeHead(503, { 'Content-Type': 'text/plain; charset=utf-8' })
@@ -283,7 +346,7 @@ class Gateway {
     })
   }
 }
-Gateway.startup = async function() {
+Gateway.startup = async function () {
   try {
     const ctx = await Context.ins()
     const gateway = new Gateway(ctx)
@@ -291,7 +354,7 @@ Gateway.startup = async function() {
     gateway.createAPI()
   } catch (e) {
     const app = http.createServer(async (req, res) => {
-      logger.error("createGateway", e)
+      logger.error('createGateway', e)
       res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' })
       return res.end(e.message)
     })

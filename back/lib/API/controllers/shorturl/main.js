@@ -13,23 +13,23 @@ class Main extends Base {
     let newParams = {}
     for (const key in params) {
       const val = params[key]
-      if (["auth", "trace", "quota", "transformRequest"].includes(key)) {
-        if (["", null].includes(val)) {
+      if (['auth', 'trace', 'quota', 'transformRequest'].includes(key)) {
+        if (['', null].includes(val)) {
           newParams[key] = null
         } else if (Array.isArray(val)) {
           newParams[key] = val
         } else {
           return [false, `参数 ${key} 格式错误`]
         }
-      } else if (key === "url") {
+      } else if (key === 'url') {
         if (!this.checkUrl(val)) {
-          return [false, "目标地址格式错误"]
+          return [false, '目标地址格式错误']
         } else {
           newParams[key] = val
         }
-      } else if (key === "title") {
+      } else if (key === 'title') {
         newParams[key] = val
-      } else if (key === "expiration") {
+      } else if (key === 'expiration') {
         if (isNaN(val) || ~~val < 1) {
           return [false, `参数 ${key} 格式错误`]
         }
@@ -52,24 +52,40 @@ class Main extends Base {
     return true
   }
   /**
-   * 
+   *
    */
   async encode() {
-    if (this.request.method !== "POST") return new ResultFault("request method != post")
+    if (this.request.method !== 'POST')
+      return new ResultFault('request method != post')
 
     const addData = this.checkParams(this.request.body)
     if (addData[0] === false) {
       return new ResultFault(addData[1])
     }
-    const { url, auth = null, trace = null, quota = null, transformRequest = null, title = "", expiration = 0 } = addData[1]
+    const {
+      url,
+      auth = null,
+      trace = null,
+      quota = null,
+      transformRequest = null,
+      title = '',
+      expiration = 0,
+    } = addData[1]
     if (!url) {
-      return new ResultFault("目标地址格式错误")
+      return new ResultFault('目标地址格式错误')
     }
-    
-    const Model = this.model("/shorturl")
+
+    const Model = this.model('/shorturl')
     let rst = await Model.byUrl(url)
     if (!rst) {
-      rst = await Model.add(url, { auth, trace, quota, transformRequest, target_title: title, expiration })
+      rst = await Model.add(url, {
+        auth,
+        trace,
+        quota,
+        transformRequest,
+        target_title: title,
+        expiration,
+      })
     }
 
     return new ResultData({
@@ -82,14 +98,15 @@ class Main extends Base {
       transformRequest: rst.transformRequest,
       title: rst.title,
       create_at: rst.createAt,
-      expiration: rst.expiration
+      expiration: rst.expiration,
     })
   }
   /**
-   * 
+   *
    */
   async updateByUrl() {
-    if (this.request.method !== "POST") return new ResultFault("request method != post")
+    if (this.request.method !== 'POST')
+      return new ResultFault('request method != post')
 
     let upData = this.checkParams(this.request.body)
     if (upData[0] === false) {
@@ -97,20 +114,20 @@ class Main extends Base {
     }
     upData = upData[1]
     if (!upData.url) {
-      return new ResultFault("目标地址格式错误")
+      return new ResultFault('目标地址格式错误')
     }
 
-    const Model = this.model("/shorturl")
+    const Model = this.model('/shorturl')
     let sUrl = await Model.byUrl(upData.url)
     if (!sUrl) {
-      return new ResultFault("指定的地址不存在")
+      return new ResultFault('指定的地址不存在')
     }
 
     upData.target_title = upData.title
     delete upData.url
     delete upData.title
     const upRst = await Model.updateById(sUrl._id, upData)
-    
+
     sUrl = JSON.parse(JSON.stringify(sUrl))
     delete sUrl._id
     delete sUrl.__v
@@ -118,10 +135,11 @@ class Main extends Base {
     return new ResultData(Object.assign({}, sUrl, upRst))
   }
   /**
-   * 
+   *
    */
-   async deleteByUrl() {
-    if (this.request.method !== "POST") return new ResultFault("request method != post")
+  async deleteByUrl() {
+    if (this.request.method !== 'POST')
+      return new ResultFault('request method != post')
 
     const upData = this.checkParams(this.request.body)
     if (upData[0] === false) {
@@ -129,30 +147,30 @@ class Main extends Base {
     }
     const { url } = upData[1]
     if (!url) {
-      return new ResultFault("目标地址格式错误")
+      return new ResultFault('目标地址格式错误')
     }
 
-    const Model = this.model("/shorturl")
+    const Model = this.model('/shorturl')
     let rst = await Model.byUrl(url)
     if (!rst) {
-      return new ResultFault("指定的地址不存在")
+      return new ResultFault('指定的地址不存在')
     }
 
     await Model.deleteByUrl(url)
-    
-    return new ResultData("成功")
+
+    return new ResultData('成功')
   }
 }
 /**
- * 
- * @param {*} shortUrl 
- * @param {*} MongooseContextCtrl 
+ *
+ * @param {*} shortUrl
+ * @param {*} MongooseContextCtrl
  * return {target: 'http://127.0.0.1:3533/etd/api/dev189',auth: [ 'httpYz' ],trace: [ 'mongodb', 'http' ],quota: [ 'rule_test' ] ,……}
  * */
 Main.decode = async (shortUrl, MongooseContextCtrl, appConfig) => {
-  const shortModel = require("../../models/shorturl")
+  const shortModel = require('../../models/shorturl')
 
-  const code = shortUrl.replace(`${appConfig.shorturl.prefix}/`, "")
+  const code = shortUrl.replace(`${appConfig.shorturl.prefix}/`, '')
   const model = new shortModel(MongooseContextCtrl)
   const shortData = await model.byCode(code)
   if (!shortData) {
@@ -165,12 +183,13 @@ Main.decode = async (shortUrl, MongooseContextCtrl, appConfig) => {
     }
   }
 
-  return { 
-    target_url: shortData.target_url, 
-    auth: shortData.auth, 
-    trace: shortData.trace, 
+  return {
+    target_url: shortData.target_url,
+    auth: shortData.auth,
+    trace: shortData.trace,
     quota: shortData.quota,
-    transformRequest: shortData.transformRequest, 
+    transformRequest: shortData.transformRequest,
+    redirect: true,
   }
 }
 

@@ -87,7 +87,7 @@ services:
       ### - TMS_METRICS_SLOWQUERYTIMEOUT=1000  指标服务中记录慢接口的依据，大于此时间后的接口记为慢接口 单位 毫秒
       # 是否开启响应拦截器
       ## - TMS_TRACEFORNRES_ENABLE=true
-    restart: always
-    ports:
-      - '3190:3000'
-      - '3191:3001'
+    # restart: always
+    # ports:
+    #   - '3000:3000'
+    #   - '3001:3001'
