@@ -1,7 +1,7 @@
 /**
  * 对外暴露的地址
  */
-const AdvertisedAddress = process.env.TMS_API_GW_ADVERTISED_ADDRESS
+const AdvertisedAddress = process.env.TAGW_ADVERTISED_ADDRESS
 
 const ProxyPort = parseInt(process.env.TAGW_PROXY_PORT) || 3000
 
