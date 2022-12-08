@@ -4,9 +4,7 @@ tms-api-gw 是一个 api 网关，可以通过设置规则将外部 http 请求�
 
 # 安装
 
-> cnpm i
-
-> cnpm i log4js
+> pnpm i
 
 # 启动
 
@@ -112,7 +110,7 @@ tms-api-gw 管理端，需要另起端口，支持自定义接口，以及为 Pr
 建立短链接
 
 ```
-curl -X POST -H "Content-Type: application/json" "http://localhost:3001/apis/shorturl/encode" -d '{"url":"xxxx"}'
+curl -X POST -H "Content-Type: application/json" "http://localhost:3001/api/shorturl/encode" -d '{"url":"xxxx"}'
 ```
 
 ```json

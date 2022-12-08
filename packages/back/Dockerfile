@@ -9,7 +9,6 @@ RUN npm config set registry https://registry.npmmirror.com
 # 安装基础包
 RUN npm install --location=global pnpm
 
-#MAINTAINER made nodejs by p21 from lit29@chinatelecom.cn
 WORKDIR /usr/src/app
 
 #Install node_modules
@@ -27,5 +26,8 @@ RUN apk update && apk add bash tzdata \
 COPY --from=builder /usr/src/app/node_modules node_modules
 #copy code && config port  && start 
 COPY . .
-EXPOSE 3000
+
+COPY ./config/gateway.js /usr/src/app/config/gateway.js
+COPY ./config/log4js.sample.js /usr/src/app/config/log4js.js
+
 CMD [ "node", "./app.js" ]

@@ -1,4 +1,6 @@
 .vscode
+node_modules/
+
 docker-compose.override.yml
 docker-compose.local.yml
 mongodb/data

@@ -1,16 +1,30 @@
-let host, port, ctrlPort
 /**
  * 对外暴露的地址
  */
 const AdvertisedAddress = process.env.TMS_API_GW_ADVERTISED_ADDRESS
 
-host = 'host.docker.internal'
-port = 3000
-ctrlPort = 3001
+const ProxyPort = parseInt(process.env.TAGW_PROXY_PORT) || 3000
+
+const ApiPort = parseInt(process.env.TAGW_API_PORT) || 3001
+
+const ShortUrlPrefix = parseInt(process.env.TAGW_SHORT_URL_PREFIX) || '/s'
+/**
+ * mongodb相关
+ */
+const MongoHost =
+  parseInt(process.env.TAGW_MONGO_HOST) || 'host.docker.internal'
+
+const MongoPort = parseInt(process.env.TAGW_MONGO_PORT) || 27017
+
+const MongoUser = process.env.TAGW_MONGO_USER
+
+const MongoPassword = process.env.TAGW_MONGO_PASSWORD
+
+const MongoDatabase = process.env.TAGW_MONGO_DATABASE || 'tms-api-gw'
 
 module.exports = {
-  port,
-  name: 'api-gw',
+  port: ProxyPort,
+  name: 'tms-api-gw',
   proxy: {
     rules: {},
   },
@@ -36,7 +50,7 @@ module.exports = {
   },
   API: {
     enable: true,
-    port: ctrlPort,
+    port: ApiPort,
     router: {
       controllers: {
         prefix: '/api', // 接口调用url的前缀
@@ -48,15 +62,15 @@ module.exports = {
     controllers: {
       enable: true,
       mongodb: {
-        host: host,
-        port: 27017,
-        database: 'tms-api-gw',
-        user: 'root',
-        password: 'root',
+        host: MongoHost,
+        port: MongoPort,
+        user: MongoUser,
+        password: MongoPassword,
+        database: MongoDatabase,
       },
       shorturl: {
         host: AdvertisedAddress,
-        prefix: '/s',
+        prefix: ShortUrlPrefix,
       },
     },
     metrics: {

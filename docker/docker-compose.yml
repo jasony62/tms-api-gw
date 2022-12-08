@@ -1,17 +1,19 @@
 version: '3.7'
 services:
-  jmongodb:
+  mongodb:
     build: ./mongodb
-    image: api-gw/mongo:latest
-    container_name: jh-mongo
+    image: tms-api-gw/mongo:latest
+    container_name: tagw-mongo
+
   back:
-    build: ./back
-    image: api-gw/back:latest
-    container_name: jh-back
+    build:
+      context: ../packages/back
+    image: jasony62/tms-api-gw:latest
+    container_name: tagw-back
     #environment:
       # 网关端口号
-      ## - TMS_APP_PORT=3000
-      ## - TMS_APP_CTRLPORT=3001
+      ## - TAGW_PROXY_PORT=3000
+      ## - TAGW_API_PORT=3001
       # 转发规则 
       ### auth 鉴权 ["http","httpPortal","httpService","httpYz","noauth"] 默认 ["http"]
       ####   http 默认方式 去 TMS_AUTH_HTTP_URL 地址里去校验token 失败时返回statusCode: 401 body: 没有找到和access_token匹配的数据（text/plain; charset=utf-8）除了鉴权以外，还会判断客户账号上的标签，并用标签进行分流。标签取值地方由 TMS_AUTH_HTTP_CLIENTLABELFIELD 变量决定
@@ -91,3 +93,5 @@ services:
     # ports:
     #   - '3000:3000'
     #   - '3001:3001'
+      # volumes:
+      #   - ./back/config:/usr/src/app/config
